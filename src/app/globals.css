@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-blue: #0071E3;
+  --primary-blue-hover: #0A84FF;
+  --primary-blue-accent: #2997FF;
+  --primary-gradient: linear-gradient(135deg, #0071E3 0%, #2997FF 100%);
+  --bg-dark: #080C14;
+  --bg-dark-surface: #0B0F19;
+  --text-light: #F8FAFC;
+  --text-muted: #94A3B8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+svg {
+  max-width: 100%;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  color: #F8FAFC;
+  background-color: #080C14;
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(0, 113, 227, 0.18) 0px, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(41, 151, 255, 0.14) 0px, transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(10, 132, 255, 0.12) 0px, transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(0, 113, 227, 0.10) 0px, transparent 50%);
+  background-attachment: fixed;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  min-height: 100vh;
+}
+
+/* Apple Signature Sapphire Blue Gradients & Accents */
+.apple-blue-gradient,
+.blue-gradient,
+.orange-gradient,
+.apple-orange-gradient {
+  background: linear-gradient(135deg, #0071E3 0%, #2997FF 100%);
+}
+
+.apple-blue-gradient-subtle {
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.15) 0%, rgba(41, 151, 255, 0.08) 100%);
+}
+
+.apple-blue-text,
+.blue-gradient-text,
+.orange-gradient-text,
+.apple-orange-text {
+  background: linear-gradient(135deg, #2997FF 0%, #0A84FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-blue,
+.glow-orange {
+  box-shadow: 0 10px 40px -5px rgba(0, 113, 227, 0.45);
+}
+
+.glow-blue-lg,
+.glow-orange-lg {
+  box-shadow: 0 0 50px rgba(0, 113, 227, 0.35), 0 0 100px rgba(41, 151, 255, 0.20);
+}
+
+/* Apple Liquid Glass Dark */
+.liquid-glass,
+.liquid-glass-dark {
+  background: rgba(18, 24, 38, 0.75);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 
+    0 12px 40px -4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 20px rgba(0, 113, 227, 0.05);
+}
+
+.liquid-glass-subtle {
+  background: rgba(18, 24, 38, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.liquid-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-card-hover:hover {
+  background: rgba(24, 34, 52, 0.85);
+  border-color: rgba(41, 151, 255, 0.35);
+  box-shadow: 
+    0 20px 50px rgba(0, 113, 227, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.bg-grid-pattern {
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Custom Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080C14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 113, 227, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
