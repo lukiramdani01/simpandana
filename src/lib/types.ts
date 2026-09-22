@@ -8,6 +8,8 @@ export interface UserProfile {
   default_currency: string;
   timezone: string;
   plan: PlanType;
+  role?: string;
+  approval_status?: string;
   telegram_user_id?: number;
   telegram_chat_id?: number;
   telegram_bot_token?: string;

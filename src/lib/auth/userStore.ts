@@ -11,7 +11,7 @@ export interface RegisteredUser {
   salt: string;
   role: 'user' | 'pro' | 'admin' | 'superadmin';
   plan: 'starter' | 'pro';
-  approval_status: 'APPROVED' | 'PENDING';
+  approval_status: 'APPROVED' | 'PENDING' | 'approved' | 'pending_approval' | 'rejected' | 'suspended';
   is_active: boolean;
   email_verified: boolean;
   email_otp?: string;
@@ -181,9 +181,9 @@ export function registerUser(params: {
     salt,
     role: isSuperAdmin ? 'superadmin' : 'user',
     plan: 'starter',
-    approval_status: 'APPROVED',
+    approval_status: isSuperAdmin ? 'approved' : 'pending_approval',
     is_active: true,
-    email_verified: isSuperAdmin ? true : false,
+    email_verified: true,
     email_otp: otp,
     verification_token: token,
     created_at: new Date().toISOString(),
@@ -191,6 +191,24 @@ export function registerUser(params: {
 
   users.set(emailClean, newUser);
   saveUsers();
+
+  try {
+    const { pendingUsersMemoryStore } = require('@/lib/telegram/linking');
+    if (!isSuperAdmin && pendingUsersMemoryStore) {
+      if (!pendingUsersMemoryStore.some((u: any) => u.id === newUser.id)) {
+        pendingUsersMemoryStore.unshift({
+          id: newUser.id,
+          full_name: newUser.full_name,
+          telegram_username: null,
+          telegram_user_id: null,
+          telegram_chat_id: null,
+          approval_status: 'pending_approval',
+          is_active: true,
+          registered_at: newUser.created_at,
+        });
+      }
+    }
+  } catch {}
 
   const { passwordHash: _, salt: __, email_otp: ___, ...safeUser } = newUser;
   return {
@@ -355,13 +373,8 @@ export function verifyCredentials(params: {
     existingUser.role = 'user';
   }
 
-  if (!existingUser.email_verified) {
-    return {
-      success: false,
-      requiresEmailVerification: true,
-      error: 'Email Anda belum diverifikasi. Silakan masukkan kode OTP yang telah dikirim ke email Anda.',
-    };
-  }
+  // Mark verified directly (No OTP verification required)
+  existingUser.email_verified = true;
 
   const { passwordHash: _, salt: __, email_otp: ___, ...safeUser } = existingUser;
   return { success: true, user: safeUser };

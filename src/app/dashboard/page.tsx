@@ -194,6 +194,7 @@ export default function DashboardPage() {
               full_name: savedUser.full_name || prev.full_name,
               phone: savedUser.email || savedUser.phone || prev.phone,
               plan: savedUser.plan || prev.plan,
+              approval_status: savedUser.approval_status || prev.approval_status,
             }));
             setProfileFullName(savedUser.full_name);
             if (savedUser.phone && savedUser.phone !== '-') {
@@ -2377,6 +2378,41 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
 
         {/* CONTENT TABS */}
         <main className="p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+          {/* PENDING SUPERADMIN APPROVAL BANNER */}
+          {profile?.approval_status &&
+            (profile.approval_status.toLowerCase() === 'pending_approval' ||
+              profile.approval_status.toLowerCase() === 'pending') && (
+              <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md animate-in fade-in">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0">
+                    ⏳
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-black text-sm text-white">Akun Menunggu Persetujuan Super Admin</h4>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-500/30">
+                        Pending Approval
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-300/80 mt-0.5 leading-relaxed">
+                      Pendaftaran berhasil tanpa verifikasi OTP. Akun Anda sedang menunggu persetujuan (approval) oleh Super Admin (lramdanie02@gmail.com).
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center space-x-2">
+                  <span className="text-xs text-slate-400">Ada kendala?</span>
+                  <a
+                    href="https://t.me/lukiramdani"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-xs font-bold transition-all"
+                  >
+                    Hubungi Admin
+                  </a>
+                </div>
+              </div>
+            )}
 
           {/* TAB 1: BERANDA */}
           {activeTab === 'beranda' && (

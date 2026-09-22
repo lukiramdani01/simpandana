@@ -66,22 +66,35 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Pendaftaran gagal. Silakan coba lagi.');
       }
 
-      if (typeof window !== 'undefined' && data.credential) {
-        try {
-          const raw = localStorage.getItem('tatadana_registered_accounts');
-          const accounts = raw ? JSON.parse(raw) : {};
-          accounts[email.trim().toLowerCase()] = data.credential;
-          localStorage.setItem('tatadana_registered_accounts', JSON.stringify(accounts));
-        } catch (e) {
-          console.warn('Could not cache registered account locally', e);
+      if (typeof window !== 'undefined') {
+        if (data.user) {
+          localStorage.setItem('tatadana_user', JSON.stringify(data.user));
+          localStorage.setItem(
+            'tatadana_session',
+            JSON.stringify({
+              access_token: 'tatadana-token-' + Date.now(),
+              user: data.user,
+              expires_at: Math.floor(Date.now() / 1000) + 86400 * 7,
+            })
+          );
+        }
+        if (data.credential) {
+          try {
+            const raw = localStorage.getItem('tatadana_registered_accounts');
+            const accounts = raw ? JSON.parse(raw) : {};
+            accounts[email.trim().toLowerCase()] = data.credential;
+            localStorage.setItem('tatadana_registered_accounts', JSON.stringify(accounts));
+          } catch (e) {
+            console.warn('Could not cache registered account locally', e);
+          }
         }
       }
 
-      setSuccessMsg('Pendaftaran akun berhasil! Mengalihkan ke halaman masuk...');
+      setSuccessMsg('Pendaftaran akun berhasil! Mengalihkan langsung ke Dashboard...');
 
       setTimeout(() => {
-        router.push(`/login?registered=1&email=${encodeURIComponent(email.trim())}`);
-      }, 700);
+        window.location.href = '/dashboard';
+      }, 500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Pendaftaran gagal. Silakan periksa kembali data Anda.');
     } finally {

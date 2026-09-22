@@ -1317,11 +1317,11 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {users.filter((u) => u.approval_status === 'pending_approval').length} Menunggu
+                  {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').length} Menunggu
                 </span>
               </div>
 
-              {users.filter((u) => u.approval_status === 'pending_approval').length === 0 ? (
+              {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400 font-mono">
                   ✓ Tidak ada pengguna baru yang menunggu persetujuan. Semua pendaftaran telah diproses!
                 </div>
@@ -1339,7 +1339,7 @@ export default function AdminDashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-medium">
-                      {users.filter((u) => u.approval_status === 'pending_approval').map((u) => (
+                      {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').map((u) => (
                         <tr key={u.id} className="hover:bg-white/5">
                           <td className="py-3 px-3 font-bold text-white">{u.full_name}</td>
                           <td className="py-3 px-3 text-cyan-400 font-mono">@{u.telegram_username || 'tidak_ada'}</td>

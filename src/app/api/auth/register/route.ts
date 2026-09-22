@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         full_name: result.user.full_name,
         plan: result.user.plan,
         role: result.user.role as any,
-        approval_status: 'approved' as any,
+        approval_status: (result.user.approval_status || 'pending_approval') as any,
         is_active: true,
         created_at: result.user.created_at,
       });
@@ -48,18 +48,30 @@ export async function POST(req: NextRequest) {
       // Supabase offline/mock fallback
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         ok: true,
-        message: 'Registrasi berhasil! Silakan verifikasi email Anda dengan kode OTP yang dikirim.',
+        message: 'Registrasi berhasil! Mengalihkan langsung ke Dashboard...',
         user: result.user,
         credential: result.credential,
-        otp: result.otp,
-        token: result.token,
-        requiresEmailVerification: !result.user.email_verified,
+        requiresEmailVerification: false,
       },
       { status: 201 }
     );
+
+    const cookieOptions = {
+      path: '/',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    };
+
+    response.cookies.set('tatadana_user_id', result.user.id, cookieOptions);
+    response.cookies.set('tatadana_demo_email', result.user.email, cookieOptions);
+    response.cookies.set('tatadana_user_status', result.user.approval_status, cookieOptions);
+
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || 'Terjadi kesalahan server saat registrasi.' },
