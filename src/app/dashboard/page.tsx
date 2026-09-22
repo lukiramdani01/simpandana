@@ -187,6 +187,21 @@ export default function DashboardPage() {
         const savedUserStr = localStorage.getItem('tatadana_user');
         if (savedUserStr) {
           savedUser = JSON.parse(savedUserStr);
+
+          // Check Superadmin approval requirement:
+          // Unapproved non-superadmin users are NOT allowed in dashboard and must stay in the register approval menu!
+          const isSuper = savedUser?.role === 'superadmin' || savedUser?.email === 'lramdanie02@gmail.com';
+          const isPending = savedUser?.approval_status && (
+            savedUser.approval_status.toLowerCase() === 'pending_approval' ||
+            savedUser.approval_status.toLowerCase() === 'pending'
+          );
+          if (!isSuper && isPending) {
+            router.replace(
+              `/register?pending=1&email=${encodeURIComponent(savedUser.email || '')}&name=${encodeURIComponent(savedUser.full_name || '')}`
+            );
+            return;
+          }
+
           if (savedUser && savedUser.full_name) {
             setProfile((prev) => ({
               ...prev,

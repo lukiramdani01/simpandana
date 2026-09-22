@@ -32,6 +32,23 @@ export default function RegisterPage() {
     status: string;
   } | null>(null);
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isPending = params.get('pending') === '1';
+      const emailParam = params.get('email');
+      const nameParam = params.get('name');
+
+      if (isPending && emailParam) {
+        setRegisteredData({
+          fullName: nameParam || emailParam.split('@')[0],
+          email: emailParam,
+          status: 'pending_approval',
+        });
+      }
+    }
+  }, []);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');

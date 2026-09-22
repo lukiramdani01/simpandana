@@ -108,6 +108,20 @@ export default function LoginPage() {
         );
       }
 
+      const isSuper = data.user?.role === 'superadmin' || data.user?.email === 'lramdanie02@gmail.com';
+      const isPending = data.user?.approval_status && (
+        data.user.approval_status.toLowerCase() === 'pending_approval' ||
+        data.user.approval_status.toLowerCase() === 'pending'
+      );
+
+      if (!isSuper && isPending) {
+        setSuccessMsg('Akun terdaftar dan sedang menunggu persetujuan Super Admin. Mengalihkan ke status pendaftaran...');
+        setTimeout(() => {
+          window.location.href = `/register?pending=1&email=${encodeURIComponent(data.user.email)}&name=${encodeURIComponent(data.user.full_name || '')}`;
+        }, 500);
+        return;
+      }
+
       setSuccessMsg(`Login berhasil! Mengalihkan ke Dashboard...`);
 
       setTimeout(() => {
