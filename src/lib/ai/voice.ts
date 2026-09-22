@@ -97,7 +97,7 @@ async function callWhisperSTT(audioBuffer: Buffer, mimeType: string, apiKey: str
 
   try {
     const formData = new FormData();
-    const blob = new Blob([audioBuffer], { type: mimeType || 'audio/ogg' });
+    const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType || 'audio/ogg' });
     formData.append('file', blob, 'audio.ogg');
     formData.append('model', 'whisper-1');
     formData.append('language', 'id');
