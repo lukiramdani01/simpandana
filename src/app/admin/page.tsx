@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -123,6 +123,16 @@ export default function AdminDashboardPage() {
 
   // Navigation tab within Admin
   const [activeSection, setActiveSection] = useState<'switchboard' | 'users' | 'payments' | 'audit' | 'simulator'>('switchboard');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const sec = params.get('section');
+      if (sec && ['switchboard', 'users', 'payments', 'audit', 'simulator'].includes(sec)) {
+        setActiveSection(sec as any);
+      }
+    }
+  }, []);
 
   // Telegram Simulator State for Admin
   const [adminSimInput, setAdminSimInput] = useState('beli bakso 25rb');
