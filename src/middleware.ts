@@ -49,6 +49,8 @@ export async function middleware(request: NextRequest) {
   }
 
   const demoCookie = request.cookies.get('tatadana_user_id')?.value;
+  const userStatusCookie = request.cookies.get('tatadana_user_status')?.value;
+
   if (!user && demoCookie) {
     user = {
       id: demoCookie,
@@ -57,6 +59,25 @@ export async function middleware(request: NextRequest) {
   }
 
   const pathname = request.nextUrl.pathname;
+
+  // Allow public access to demo, login, register, pending-approval
+  if (
+    pathname === '/demo' ||
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/pending-approval' ||
+    pathname.startsWith('/api/')
+  ) {
+    if (userStatusCookie === 'PENDING' && pathname === '/dashboard') {
+      return NextResponse.redirect(new URL('/pending-approval', request.url));
+    }
+    return response;
+  }
+
+  // Redirect PENDING users trying to access protected routes to /pending-approval
+  if (userStatusCookie === 'PENDING' && pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/pending-approval', request.url));
+  }
 
   // Protect /admin routes (superadmin required)
   if (pathname.startsWith('/admin')) {
@@ -89,8 +110,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated user from /login to /dashboard
-  if (pathname === '/login' && user) {
+  // Redirect authenticated user from /login to /dashboard if APPROVED
+  if (pathname === '/login' && user && userStatusCookie !== 'PENDING') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

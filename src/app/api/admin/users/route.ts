@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import {
   approveUserProfile,
   rejectUserProfile,
+  suspendUserProfile,
   toggleUserActiveState,
   pendingUsersMemoryStore,
 } from '@/lib/telegram/linking';
@@ -45,7 +46,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       users: finalUsers,
-      pendingCount: finalUsers.filter((u) => u.approval_status === 'pending_approval').length,
+      pendingCount: finalUsers.filter((u) => u.approval_status === 'pending_approval' || u.approval_status === 'PENDING').length,
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'Error fetching users' }, { status: 500 });
@@ -71,7 +72,19 @@ export async function POST(request: Request) {
       await rejectUserProfile(userId);
       return NextResponse.json({
         ok: true,
-        message: `Pengguna ${userId} telah ditolak. Pesan penolakan otomatis telah dikirimkan ke Telegram pengguna.`,
+        message: `Pengguna ${userId} telah ditolak.`,
+      });
+    } else if (action === 'suspend') {
+      await suspendUserProfile(userId);
+      return NextResponse.json({
+        ok: true,
+        message: `Pengguna ${userId} telah dibekukan (SUSPENDED).`,
+      });
+    } else if (action === 'activate') {
+      await toggleUserActiveState(userId, true);
+      return NextResponse.json({
+        ok: true,
+        message: `Akses pengguna ${userId} berhasil diaktifkan.`,
       });
     } else if (action === 'toggle_active') {
       const nextState = typeof isActive === 'boolean' ? isActive : true;

@@ -19,7 +19,7 @@ export interface Database {
           timezone: string;
           plan: 'starter' | 'pro';
           role: 'user' | 'superadmin';
-          approval_status: 'pending_approval' | 'approved' | 'rejected';
+          approval_status: 'pending_approval' | 'approved' | 'rejected' | 'suspended';
           is_active: boolean;
           telegram_user_id: number | null;
           telegram_chat_id: number | null;
@@ -40,7 +40,7 @@ export interface Database {
           timezone?: string;
           plan?: 'starter' | 'pro';
           role?: 'user' | 'superadmin';
-          approval_status?: 'pending_approval' | 'approved' | 'rejected';
+          approval_status?: 'pending_approval' | 'approved' | 'rejected' | 'suspended';
           is_active?: boolean;
           telegram_user_id?: number | null;
           telegram_chat_id?: number | null;
@@ -61,7 +61,7 @@ export interface Database {
           timezone?: string;
           plan?: 'starter' | 'pro';
           role?: 'user' | 'superadmin';
-          approval_status?: 'pending_approval' | 'approved' | 'rejected';
+          approval_status?: 'pending_approval' | 'approved' | 'rejected' | 'suspended';
           is_active?: boolean;
           telegram_user_id?: number | null;
           telegram_chat_id?: number | null;

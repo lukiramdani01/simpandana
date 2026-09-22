@@ -13,7 +13,7 @@ export interface TelegramProfile {
   plan: 'starter' | 'pro';
   default_currency: string;
   timezone: string;
-  approval_status: 'pending_approval' | 'approved' | 'rejected';
+  approval_status: 'pending_approval' | 'approved' | 'rejected' | 'suspended';
   is_active: boolean;
   telegram_user_id: number | null;
   telegram_chat_id: number | null;
@@ -28,7 +28,7 @@ type PendingUserItem = {
   telegram_username: string | null;
   telegram_user_id: number;
   telegram_chat_id: number;
-  approval_status: 'pending_approval' | 'approved' | 'rejected';
+  approval_status: 'pending_approval' | 'approved' | 'rejected' | 'suspended';
   is_active: boolean;
   registered_at: string;
   telegram_welcome_sent?: boolean;
@@ -344,7 +344,7 @@ export async function linkTelegramAccount(
 }
 
 /**
- * Approves a new user, sets approval_status to 'approved'
+ * Approves a new user, sets approval_status to 'approved', and sends Telegram welcome message
  */
 export async function approveUserProfile(userId: string): Promise<boolean> {
   let targetChatId: number | null = null;
@@ -359,15 +359,31 @@ export async function approveUserProfile(userId: string): Promise<boolean> {
   });
 
   try {
+    const { data: prof } = await supabaseAdmin
+      .from('profiles')
+      .select('telegram_chat_id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (prof?.telegram_chat_id) {
+      targetChatId = prof.telegram_chat_id;
+    }
+
     await supabaseAdmin
       .from('profiles')
       .update({
-        approval_status: 'approved',
+        approval_status: 'approved' as any,
         is_active: true,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
   } catch (err) {}
+
+  // Auto welcome message sent to Telegram when Admin approves a user
+  const chatToNotify = targetChatId || (numId ? numId : null);
+  if (chatToNotify) {
+    const welcomeMsg = `🎉 <b>Selamat! Akun SimpanUang Anda Telah Disetujui Admin.</b>\n\nSekarang Anda dapat menggunakan seluruh fitur SimpanUang SaaS untuk pencatatan keuangan secara instan!`;
+    await sendOutboundTelegramMessage(chatToNotify, welcomeMsg);
+  }
 
   return true;
 }
@@ -391,7 +407,34 @@ export async function rejectUserProfile(userId: string): Promise<boolean> {
     await supabaseAdmin
       .from('profiles')
       .update({
-        approval_status: 'rejected',
+        approval_status: 'rejected' as any,
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+  } catch (err) {}
+
+  return true;
+}
+
+/**
+ * Suspends a user profile
+ */
+export async function suspendUserProfile(userId: string): Promise<boolean> {
+  const numId = Number(userId);
+
+  pendingUsersMemoryStore.forEach((u) => {
+    if (u.id === userId || (numId && u.telegram_user_id === numId) || u.id.includes(userId)) {
+      u.approval_status = 'rejected';
+      u.is_active = false;
+    }
+  });
+
+  try {
+    await supabaseAdmin
+      .from('profiles')
+      .update({
+        approval_status: 'suspended' as any,
         is_active: false,
         updated_at: new Date().toISOString(),
       })

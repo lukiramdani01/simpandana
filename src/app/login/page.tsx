@@ -621,15 +621,18 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
+                <Link
+                  href="/register"
                   className="font-bold text-[#2997FF] hover:text-[#0A84FF]"
                 >
-                  {isSignUp
-                    ? 'Sudah punya akun? Masuk'
-                    : 'Belum punya akun? Daftar Baru'}
-                </button>
+                  Belum punya akun? Daftar Baru
+                </Link>
+                <Link
+                  href="/demo"
+                  className="font-semibold text-amber-400 hover:text-amber-300"
+                >
+                  Coba Demo Sandbox
+                </Link>
               </div>
 
               <button
@@ -650,14 +653,20 @@ export default function LoginPage() {
           )}
 
           {/* Quick Demo Bypass */}
-          <div className="pt-4 border-t border-white/10 text-center">
+          <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold">
             <button
               type="button"
               onClick={() => loginAsDemoUser()}
-              className="text-xs font-bold text-[#2997FF] hover:text-[#0A84FF] transition-colors"
+              className="text-[#2997FF] hover:text-[#0A84FF] transition-colors"
             >
-              ⚡ Masuk Mode Demo Pro →
+              ⚡ Instant Login (Luki Ramdani) →
             </button>
+            <Link
+              href="/demo"
+              className="text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Mode Sandbox Demo →
+            </Link>
           </div>
         </div>
       </div>
