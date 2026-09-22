@@ -232,6 +232,7 @@ export async function linkTelegramAccount(
 
   let memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
   if (!memUser) {
+    isFirstTimeWelcome = true;
     const storeUser = getUserById(userId);
     memUser = {
       id: userId,
@@ -239,14 +240,21 @@ export async function linkTelegramAccount(
       telegram_username: telegramUsername || null,
       telegram_user_id: telegramUserId,
       telegram_chat_id: telegramChatId,
+      telegram_welcome_sent: true,
+      telegram_welcome_sent_at: nowIso,
       approval_status: 'approved',
       is_active: true,
       registered_at: nowIso,
     };
     pendingUsersMemoryStore.push(memUser);
   } else {
+    if (!memUser.telegram_welcome_sent) {
+      isFirstTimeWelcome = true;
+    }
     memUser.telegram_user_id = telegramUserId;
     memUser.telegram_chat_id = telegramChatId;
+    memUser.telegram_welcome_sent = true;
+    memUser.telegram_welcome_sent_at = nowIso;
     if (telegramUsername) memUser.telegram_username = telegramUsername;
   }
 

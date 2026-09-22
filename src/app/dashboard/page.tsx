@@ -183,9 +183,10 @@ export default function DashboardPage() {
 
       // Sync user profile from storage if available
       try {
+        let savedUser: any = null;
         const savedUserStr = localStorage.getItem('tatadana_user');
         if (savedUserStr) {
-          const savedUser = JSON.parse(savedUserStr);
+          savedUser = JSON.parse(savedUserStr);
           if (savedUser && savedUser.full_name) {
             setProfile((prev) => ({
               ...prev,
@@ -198,6 +199,22 @@ export default function DashboardPage() {
             if (savedUser.phone && savedUser.phone !== '-') {
               setProfilePhone(savedUser.phone);
             }
+          }
+        }
+
+        const activeUserId = savedUser?.id || 'usr-101';
+        const savedTxsStr = localStorage.getItem(`tatadana_transactions_${activeUserId}`);
+        if (savedTxsStr) {
+          const parsedTxs = JSON.parse(savedTxsStr);
+          if (Array.isArray(parsedTxs) && parsedTxs.length > 0) {
+            setTransactions((prev) => {
+              const map = new Map<string, Transaction>();
+              prev.forEach((t) => map.set(t.id, t));
+              parsedTxs.forEach((t) => map.set(t.id, t));
+              return Array.from(map.values()).sort(
+                (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+              );
+            });
           }
         }
       } catch (err) {
@@ -256,7 +273,22 @@ export default function DashboardPage() {
         if (!res.ok) return;
         const data = await res.json();
         if (isMounted && data.ok && Array.isArray(data.transactions)) {
-          setTransactions(data.transactions);
+          setTransactions((prev) => {
+            const apiTxs = data.transactions as Transaction[];
+            const map = new Map<string, Transaction>();
+            // Keep local state first so newly created transactions are never wiped out
+            prev.forEach((t) => map.set(t.id, t));
+            apiTxs.forEach((t) => map.set(t.id, t));
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(`tatadana_transactions_${activeId}`, JSON.stringify(merged));
+              } catch {}
+            }
+            return merged;
+          });
         }
       } catch {
         // Network tolerance
@@ -1021,7 +1053,16 @@ export default function DashboardPage() {
     };
 
     // 1. Update Transactions List (prepend) and trigger highlight pulse
-    setTransactions((prev) => [newTx, ...prev.filter((t) => t.id !== newTx.id)]);
+    setTransactions((prev) => {
+      const updated = [newTx, ...prev.filter((t) => t.id !== newTx.id)];
+      if (typeof window !== 'undefined') {
+        try {
+          const activeId = profile?.id || 'usr-101';
+          localStorage.setItem(`tatadana_transactions_${activeId}`, JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
     setNewTxId(newTx.id);
     setTimeout(() => setNewTxId(null), 3500);
 
@@ -1578,15 +1619,57 @@ ${itemListText}
     const dayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
     const dateFormatted = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Record the transaction with the chosen wallet!
-    const result = recordNewTransaction({
-      type: choice.type,
-      amount: choice.amount,
-      category_name: choice.category,
-      wallet_id: selectedWallet.id,
-      notes: choice.notes,
-      source: 'telegram_text',
-    });
+    // If transaction already recorded, update wallet; otherwise record new
+    let result: any;
+    const existingTx = transactions.find((t) => t.id === choice.id);
+    if (existingTx) {
+      const oldWalletId = existingTx.wallet_id;
+      setTransactions((prev) => {
+        const updated = prev.map((t) =>
+          t.id === choice.id ? { ...t, wallet_id: selectedWallet.id, wallet_name: selectedWallet.name } : t
+        );
+        if (typeof window !== 'undefined') {
+          try {
+            const activeId = profile?.id || 'usr-101';
+            localStorage.setItem(`tatadana_transactions_${activeId}`, JSON.stringify(updated));
+          } catch {}
+        }
+        return updated;
+      });
+      setWallets((prev) =>
+        prev.map((w) => {
+          if (w.id === oldWalletId) {
+            return {
+              ...w,
+              balance: choice.type === 'income' ? w.balance - choice.amount : w.balance + choice.amount,
+            };
+          }
+          if (w.id === selectedWallet.id) {
+            return {
+              ...w,
+              balance: choice.type === 'income' ? w.balance + choice.amount : w.balance - choice.amount,
+            };
+          }
+          return w;
+        })
+      );
+      result = {
+        tx: { ...existingTx, wallet_id: selectedWallet.id, wallet_name: selectedWallet.name },
+        newWalletBalance:
+          choice.type === 'income'
+            ? (selectedWallet.balance || 0) + choice.amount
+            : (selectedWallet.balance || 0) - choice.amount,
+      };
+    } else {
+      result = recordNewTransaction({
+        type: choice.type,
+        amount: choice.amount,
+        category_name: choice.category,
+        wallet_id: selectedWallet.id,
+        notes: choice.notes,
+        source: 'telegram_text',
+      });
+    }
 
     // Mark completed in message
     setChatMessages((prev) =>
@@ -1909,31 +1992,92 @@ Setiap transaksi yang kamu chat di sini otomatis memotong budget kategori terseb
       return;
     }
 
-    // 7. Natural Language Transaction Parsing (NLP) with Interactive Wallet Confirmation
+    // 7. Natural Language Transaction Parsing (NLP) with Instant Execution & Interactive Confirmation
     const parsed = parseTransactionFromText(textToSend);
     if (parsed && parsed.amount > 0) {
       const isExp = parsed.type === 'expense';
-      const promptText = `🤖 **Transaksi Terdeteksi!**
-${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toLocaleString('id-ID')}**
-🏷️ Kategori: **${parsed.categoryIcon} ${parsed.category}**
-📝 Catatan: *${parsed.notes || textToSend}*
+      let chosenWallet = wallets.find((w) => w.is_default) || wallets[0];
+      if (lower.includes('bca')) {
+        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('bca')) || chosenWallet;
+      } else if (lower.includes('mandiri')) {
+        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('mandiri')) || chosenWallet;
+      } else if (lower.includes('gopay') || lower.includes('go-pay')) {
+        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('gopay')) || chosenWallet;
+      } else if (lower.includes('cash') || lower.includes('tunai') || lower.includes('dompet')) {
+        chosenWallet = wallets.find((w) => w.id === 'w_cash' || w.name.toLowerCase().includes('cash') || w.name.toLowerCase().includes('tunai')) || chosenWallet;
+      }
 
-👇 **Silakan pilih dompet yang digunakan untuk transaksi ini:**`;
+      // Record immediately into state, localStorage, and database!
+      const result = recordNewTransaction({
+        type: parsed.type,
+        amount: parsed.amount,
+        category_name: parsed.category,
+        wallet_id: chosenWallet.id,
+        notes: parsed.notes || textToSend,
+        source: 'telegram_text',
+      });
+
+      const dayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
+      const dateFormatted = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      // Target budget progress if expense
+      const targetBudget = budgets.find(
+        (b) =>
+          (b.category_name || '').toLowerCase().includes(parsed.category.toLowerCase()) ||
+          parsed.category.toLowerCase().includes((b.category_name || '').toLowerCase())
+      ) || {
+        monthly_limit: parsed.amount * 2,
+        current_spent: parsed.amount,
+        category_icon: parsed.categoryIcon,
+      };
+      const updatedSpent = targetBudget.current_spent + (isExp ? parsed.amount : 0);
+      const pct = Math.min(100, Math.round((updatedSpent / targetBudget.monthly_limit) * 100));
+      const bars = '█'.repeat(Math.floor(pct / 10)) + '░'.repeat(10 - Math.floor(pct / 10));
+      const sisaCat = Math.max(0, targetBudget.monthly_limit - updatedSpent);
+
+      let confirmReply = '';
+      if (isExp) {
+        confirmReply = `📅 ${dayName}, ${dateFormatted} — ${timeStr}
+✅ **Pengeluaran Berhasil Dicatat ke ${chosenWallet.name}!**
+├ Nominal : Rp${parsed.amount.toLocaleString('id-ID')}
+├ Kategori : ${parsed.categoryIcon} ${parsed.category}
+├ Dompet : 👛 ${chosenWallet.name}
+├ Catatan : ${parsed.notes || textToSend}
+└ Sisa Saldo ${chosenWallet.name} : Rp${result.newWalletBalance.toLocaleString('id-ID')}
+
+📊 **Budget ${parsed.category} bulan ini:**
+[${bars}] ${pct}% — Sisa Rp${sisaCat.toLocaleString('id-ID')}
+${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '✨ Transaksi tercatat rapi.'}
+
+✨ *Transaksi otomatis masuk ke Beranda, Transaksi, dan Multi-Wallet!*`;
+      } else {
+        confirmReply = `📅 ${dayName}, ${dateFormatted} — ${timeStr}
+✅ **Pemasukan Berhasil Ditambahkan ke ${chosenWallet.name}!**
+├ Nominal : Rp${parsed.amount.toLocaleString('id-ID')}
+├ Kategori : 💰 Pemasukan
+├ Dompet : 👛 ${chosenWallet.name}
+├ Catatan : ${parsed.notes || textToSend}
+└ Saldo Baru ${chosenWallet.name} : Rp${result.newWalletBalance.toLocaleString('id-ID')}
+
+💪 Saldo ${chosenWallet.name} Anda bertambah.
+✨ *Tersinkronisasi langsung ke Dashboard & Laporan!*`;
+      }
 
       setTimeout(() => {
         setChatMessages((prev) => [
           ...prev,
           {
             sender: 'bot',
-            text: promptText,
+            text: confirmReply,
             time: timeStr,
             pendingWalletChoice: {
-              id: `p-${Date.now()}`,
+              id: result.tx.id,
               type: parsed.type,
               amount: parsed.amount,
               category: parsed.category,
               categoryIcon: parsed.categoryIcon,
               notes: parsed.notes || textToSend,
+              completedWallet: chosenWallet.name,
             },
           },
         ]);
