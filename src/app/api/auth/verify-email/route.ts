@@ -1,35 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCredentials } from '@/lib/auth/userStore';
+import { verifyEmailOTP, verifyEmailToken, getUserByEmail } from '@/lib/auth/userStore';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { email, password, credential } = body || {};
+    const { email, otp, token } = body || {};
 
-    if (!email || !password) {
+    let result;
+    if (token) {
+      result = verifyEmailToken(token);
+    } else if (email && otp) {
+      result = verifyEmailOTP(email, otp);
+    } else {
       return NextResponse.json(
-        { ok: false, error: 'Email dan password wajib diisi.' },
+        { ok: false, error: 'Email dan kode OTP atau token verifikasi wajib diisi.' },
         { status: 400 }
       );
     }
 
-    const result = verifyCredentials({ email, password, credential });
-
-    if (result.requiresEmailVerification) {
-      return NextResponse.json({
-        ok: false,
-        requiresEmailVerification: true,
-        email: email.trim(),
-        error: 'Email Anda belum diverifikasi. Masukkan 6 digit kode OTP yang dikirim ke email.',
-      }, { status: 403 });
-    }
-
     if (!result.success || !result.user) {
       return NextResponse.json(
-        { ok: false, error: result.error || 'Autentikasi gagal.' },
-        { status: 401 }
+        { ok: false, error: result.error || 'Verifikasi email gagal.' },
+        { status: 400 }
       );
     }
 
@@ -37,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       ok: true,
-      message: `Login berhasil! Selamat datang kembali, ${user.full_name}.`,
+      message: 'Email berhasil diverifikasi! Mengalihkan ke Dashboard...',
       user: {
         id: user.id,
         email: user.email,
@@ -63,7 +57,7 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: err?.message || 'Terjadi kesalahan server saat login.' },
+      { ok: false, error: err?.message || 'Terjadi kesalahan server saat verifikasi email.' },
       { status: 500 }
     );
   }

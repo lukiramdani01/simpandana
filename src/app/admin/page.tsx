@@ -82,7 +82,23 @@ export default function AdminDashboardPage() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('simpandana_admin_auth', 'true');
+      try {
+        const savedUserStr = localStorage.getItem('tatadana_user');
+        if (savedUserStr) {
+          const u = JSON.parse(savedUserStr);
+          if (u?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || u?.role === 'superadmin') {
+            setAdminAuthenticated(true);
+            localStorage.setItem('simpandana_admin_auth', 'true');
+          } else {
+            setAdminAuthenticated(false);
+            localStorage.removeItem('simpandana_admin_auth');
+          }
+        } else {
+          setAdminAuthenticated(false);
+        }
+      } catch {
+        setAdminAuthenticated(false);
+      }
     }
   }, []);
 

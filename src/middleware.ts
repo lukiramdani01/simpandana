@@ -48,61 +48,44 @@ export async function middleware(request: NextRequest) {
   }
 
   const userIdCookie = request.cookies.get('tatadana_user_id')?.value;
+  const userEmailCookie = request.cookies.get('tatadana_demo_email')?.value?.toLowerCase();
   const userStatusCookie = request.cookies.get('tatadana_user_status')?.value;
 
   if (!user && userIdCookie && userIdCookie.trim().length > 0) {
     user = {
       id: userIdCookie,
-      email: request.cookies.get('tatadana_demo_email')?.value || 'pengguna@simpandana.my.id',
+      email: userEmailCookie || 'pengguna@simpandana.my.id',
     } as any;
   }
 
   const userStatus = userStatusCookie || user?.user_metadata?.status || user?.app_metadata?.status;
   const pathname = request.nextUrl.pathname;
 
-  // Check if route is a public unauthenticated route
+  // Public unauthenticated routes
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/demo' ||
+    pathname === '/verify-email' ||
     pathname === '/pending-approval' ||
     pathname === '/forgot-password' ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/');
 
-  // Redirect PENDING users trying to access non-pending routes to /pending-approval
-  if (user && userStatus === 'PENDING' && pathname !== '/pending-approval' && !pathname.startsWith('/api/') && !pathname.startsWith('/auth/')) {
-    return NextResponse.redirect(new URL('/pending-approval', request.url));
-  }
-
-  // If route is public, allow access (do not automatically bounce from /login or /register)
-  if (isPublicRoute) {
-    return response;
-  }
-
-  // Strictly require authentication for all non-public protected routes (e.g. /dashboard, /admin)
-  if (!user || !userIdCookie || userIdCookie.trim().length === 0) {
+  // If unauthenticated user tries to access protected routes
+  if (!isPublicRoute && (!user || !userIdCookie || userIdCookie.trim().length === 0)) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('error', 'unauthorized');
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Protect /admin routes (superadmin required)
+  // Protect /admin route strictly for lramdanie02@gmail.com / superadmin
   if (pathname.startsWith('/admin')) {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.role !== 'superadmin') {
-        return NextResponse.redirect(new URL('/dashboard?error=unauthorized', request.url));
-      }
-    } catch {
-      // In mock/offline mode, allow if role is superadmin
+    const activeEmail = userEmailCookie || user?.email?.toLowerCase();
+    if (activeEmail !== 'lramdanie02@gmail.com') {
+      return NextResponse.redirect(new URL('/dashboard?error=unauthorized_admin', request.url));
     }
   }
 

@@ -6,6 +6,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { initialProfile } from '@/lib/mock-data';
+import { getUserById } from '@/lib/auth/userStore';
 
 export interface TelegramProfile {
   id: string;
@@ -93,7 +94,6 @@ async function withDbTimeout<T>(promise: PromiseLike<T>, ms = 50): Promise<T> {
 
 /**
  * Resolves linked SimpanUang profile for an incoming Telegram user.
- * STRICT MAPPING: Returns null if telegram_user_id is not linked to any account.
  */
 export async function resolveUserProfile(
   telegramUserId?: number | null,
@@ -108,8 +108,6 @@ export async function resolveUserProfile(
 
   // 1. Check initial mock profile & auto-linked set (Luki Ramdani - usr-101)
   if (
-    (numTgId && autoLinkedTgUserIds.has(numTgId)) ||
-    (numChatId && autoLinkedTgUserIds.has(numChatId)) ||
     (numTgId && initialProfile.telegram_user_id === numTgId) ||
     (numChatId && initialProfile.telegram_chat_id === numChatId)
   ) {
@@ -187,15 +185,10 @@ export async function resolveUserProfile(
     };
   }
 
-  // 4. Seamless User Auto-Linking: Automatically link unlinked Telegram user to primary account usr-101 (Luki Ramdani)
+  // 4. Default linking for primary user usr-101 if initial testing
   if (autoLink && (numTgId || numChatId)) {
     const linkTgId = numTgId || numChatId || 182938491;
     const linkChatId = numChatId || numTgId || 182938491;
-
-    if (linkTgId) autoLinkedTgUserIds.add(linkTgId);
-    if (linkChatId) autoLinkedTgUserIds.add(linkChatId);
-
-    await linkTelegramAccount('usr-101', linkTgId, linkChatId, fromObj?.username);
 
     return {
       id: initialProfile.id,
@@ -228,106 +221,40 @@ export async function linkTelegramAccount(
   let isFirstTimeWelcome = false;
   const nowIso = new Date().toISOString();
 
-  if (userId === initialProfile.id) {
-    if (telegramUserId) autoLinkedTgUserIds.add(telegramUserId);
-    if (telegramChatId) autoLinkedTgUserIds.add(telegramChatId);
-  } else {
-    if (telegramUserId) autoLinkedTgUserIds.delete(telegramUserId);
-    if (telegramChatId) autoLinkedTgUserIds.delete(telegramChatId);
-  }
-
-  const memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
-  if (memUser) {
-    if (!memUser.telegram_welcome_sent) {
-      isFirstTimeWelcome = true;
-      memUser.telegram_welcome_sent = true;
-      memUser.telegram_welcome_sent_at = nowIso;
-    }
-    memUser.telegram_user_id = telegramUserId;
-    memUser.telegram_chat_id = telegramChatId;
-    if (telegramUsername) memUser.telegram_username = telegramUsername;
-  } else if (userId !== initialProfile.id) {
-    isFirstTimeWelcome = true;
-    pendingUsersMemoryStore.unshift({
+  let memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
+  if (!memUser) {
+    const storeUser = getUserById(userId);
+    memUser = {
       id: userId,
-      full_name: 'Pengguna',
+      full_name: storeUser?.full_name || 'Pengguna SimpanUang',
       telegram_username: telegramUsername || null,
       telegram_user_id: telegramUserId,
       telegram_chat_id: telegramChatId,
       approval_status: 'approved',
       is_active: true,
       registered_at: nowIso,
-      telegram_welcome_sent: true,
-      telegram_welcome_sent_at: nowIso,
-    });
-  }
-
-  if (userId === initialProfile.id) {
-    if (!(initialProfile as any).telegram_welcome_sent) {
-      isFirstTimeWelcome = true;
-      (initialProfile as any).telegram_welcome_sent = true;
-      (initialProfile as any).telegram_welcome_sent_at = nowIso;
-    }
-    initialProfile.telegram_user_id = telegramUserId;
-    initialProfile.telegram_chat_id = telegramChatId;
+    };
+    pendingUsersMemoryStore.push(memUser);
+  } else {
+    memUser.telegram_user_id = telegramUserId;
+    memUser.telegram_chat_id = telegramChatId;
+    if (telegramUsername) memUser.telegram_username = telegramUsername;
   }
 
   try {
-    const { data: existingProfile } = await withDbTimeout(
-      supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle(),
-      50
-    );
+    await supabaseAdmin.from('profiles').upsert({
+      id: userId,
+      telegram_user_id: telegramUserId,
+      telegram_chat_id: telegramChatId,
+      telegram_username: telegramUsername || null,
+      telegram_welcome_sent: true,
+      telegram_welcome_sent_at: nowIso,
+    });
+  } catch {}
 
-    if (existingProfile) {
-      if (!existingProfile.telegram_welcome_sent) {
-        isFirstTimeWelcome = true;
-      }
-
-      await withDbTimeout(
-        supabaseAdmin
-          .from('profiles')
-          .update({
-            telegram_user_id: telegramUserId,
-            telegram_chat_id: telegramChatId,
-            telegram_username: telegramUsername || null,
-            telegram_welcome_sent: true,
-            telegram_welcome_sent_at: existingProfile.telegram_welcome_sent_at || nowIso,
-            updated_at: nowIso,
-          })
-          .eq('id', userId),
-        50
-      );
-    } else {
-      if (!memUser || !memUser.telegram_welcome_sent) {
-        isFirstTimeWelcome = true;
-      }
-      await withDbTimeout(
-        supabaseAdmin.from('profiles').insert({
-          id: userId,
-          full_name: 'Pengguna SimpanUang',
-          plan: 'pro',
-          approval_status: 'approved',
-          is_active: true,
-          telegram_user_id: telegramUserId,
-          telegram_chat_id: telegramChatId,
-          telegram_username: telegramUsername || null,
-          telegram_welcome_sent: true,
-          telegram_welcome_sent_at: nowIso,
-        }),
-        50
-      );
-    }
-  } catch (err) {
-    // Memory store handles fallback
-  }
-
-  const resolvedProfile: TelegramProfile = {
+  const profile: TelegramProfile = {
     id: userId,
-    full_name: memUser?.full_name || initialProfile.full_name || 'Pengguna',
+    full_name: memUser.full_name,
     plan: 'pro',
     default_currency: 'IDR',
     timezone: 'Asia/Jakarta',
@@ -335,136 +262,41 @@ export async function linkTelegramAccount(
     is_active: true,
     telegram_user_id: telegramUserId,
     telegram_chat_id: telegramChatId,
-    telegram_username: telegramUsername,
+    telegram_username: telegramUsername || null,
     telegram_welcome_sent: true,
     telegram_welcome_sent_at: nowIso,
   };
 
-  return { success: true, isFirstTimeWelcome, profile: resolvedProfile };
+  return { success: true, isFirstTimeWelcome, profile };
 }
 
-/**
- * Approves a new user, sets approval_status to 'approved', and sends Telegram welcome message
- */
-export async function approveUserProfile(userId: string): Promise<boolean> {
-  let targetChatId: number | null = null;
-  const numId = Number(userId);
-
-  pendingUsersMemoryStore.forEach((u) => {
-    if (u.id === userId || (numId && u.telegram_user_id === numId) || u.id.includes(userId)) {
-      u.approval_status = 'approved';
-      u.is_active = true;
-      if (u.telegram_chat_id) targetChatId = u.telegram_chat_id;
-    }
-  });
-
-  try {
-    const { data: prof } = await supabaseAdmin
-      .from('profiles')
-      .select('telegram_chat_id')
-      .eq('id', userId)
-      .maybeSingle();
-    if (prof?.telegram_chat_id) {
-      targetChatId = prof.telegram_chat_id;
-    }
-
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        approval_status: 'approved' as any,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-  } catch (err) {}
-
-  // Auto welcome message sent to Telegram when Admin approves a user
-  const chatToNotify = targetChatId || (numId ? numId : null);
-  if (chatToNotify) {
-    const welcomeMsg = `🎉 <b>Selamat! Akun SimpanUang Anda Telah Disetujui Admin.</b>\n\nSekarang Anda dapat menggunakan seluruh fitur SimpanUang SaaS untuk pencatatan keuangan secara instan!`;
-    await sendOutboundTelegramMessage(chatToNotify, welcomeMsg);
+export async function approveUserProfile(userId: string) {
+  const memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
+  if (memUser) {
+    memUser.approval_status = 'approved';
+    memUser.is_active = true;
   }
-
-  return true;
 }
 
-/**
- * Rejects a user profile
- */
-export async function rejectUserProfile(userId: string): Promise<boolean> {
-  let targetChatId: number | null = null;
-  const numId = Number(userId);
-
-  pendingUsersMemoryStore.forEach((u) => {
-    if (u.id === userId || (numId && u.telegram_user_id === numId) || u.id.includes(userId)) {
-      u.approval_status = 'rejected';
-      u.is_active = false;
-      if (u.telegram_chat_id) targetChatId = u.telegram_chat_id;
-    }
-  });
-
-  try {
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        approval_status: 'rejected' as any,
-        is_active: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-  } catch (err) {}
-
-  return true;
+export async function rejectUserProfile(userId: string) {
+  const memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
+  if (memUser) {
+    memUser.approval_status = 'rejected';
+    memUser.is_active = false;
+  }
 }
 
-/**
- * Suspends a user profile
- */
-export async function suspendUserProfile(userId: string): Promise<boolean> {
-  const numId = Number(userId);
-
-  pendingUsersMemoryStore.forEach((u) => {
-    if (u.id === userId || (numId && u.telegram_user_id === numId) || u.id.includes(userId)) {
-      u.approval_status = 'rejected';
-      u.is_active = false;
-    }
-  });
-
-  try {
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        approval_status: 'suspended' as any,
-        is_active: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-  } catch (err) {}
-
-  return true;
+export async function suspendUserProfile(userId: string) {
+  const memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
+  if (memUser) {
+    memUser.approval_status = 'suspended';
+    memUser.is_active = false;
+  }
 }
 
-/**
- * Toggles user active state
- */
-export async function toggleUserActiveState(userId: string, isActive: boolean): Promise<boolean> {
-  const numId = Number(userId);
-
-  pendingUsersMemoryStore.forEach((u) => {
-    if (u.id === userId || (numId && u.telegram_user_id === numId) || u.id.includes(userId)) {
-      u.is_active = isActive;
-    }
-  });
-
-  try {
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        is_active: isActive,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-  } catch (err) {}
-
-  return true;
+export async function toggleUserActiveState(userId: string, isActive: boolean) {
+  const memUser = pendingUsersMemoryStore.find((u) => u.id === userId);
+  if (memUser) {
+    memUser.is_active = isActive;
+  }
 }

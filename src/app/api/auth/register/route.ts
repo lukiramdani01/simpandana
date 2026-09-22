@@ -30,12 +30,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Send email log / fallback preview
+    console.log(`[Email Mailer Log] OTP sent to ${email}: ${result.otp}`);
+
     // Attempt to also sync with Supabase profiles table if available
     try {
       await supabaseAdmin.from('profiles').upsert({
         id: result.user.id,
         full_name: result.user.full_name,
         plan: result.user.plan,
+        role: result.user.role as any,
         approval_status: 'approved' as any,
         is_active: true,
         created_at: result.user.created_at,
@@ -47,9 +51,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         ok: true,
-        message: 'Registrasi berhasil! Silakan login dengan akun yang telah dibuat.',
+        message: 'Registrasi berhasil! Silakan verifikasi email Anda dengan kode OTP yang dikirim.',
         user: result.user,
         credential: result.credential,
+        otp: result.otp,
+        token: result.token,
+        requiresEmailVerification: !result.user.email_verified,
       },
       { status: 201 }
     );

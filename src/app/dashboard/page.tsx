@@ -171,13 +171,28 @@ export default function DashboardPage() {
     }
   };
 
-  // Admin auth state check to hide admin link from regular users
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true);
+  // Admin auth state check to hide admin link from regular users (ONLY lramdanie02@gmail.com)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('simpandana_admin_auth', 'true');
-      setIsAdminAuthenticated(true);
+      try {
+        const savedUserStr = localStorage.getItem('tatadana_user');
+        if (savedUserStr) {
+          const u = JSON.parse(savedUserStr);
+          const isSuper = u?.email?.toLowerCase() === 'lramdanie02@gmail.com' || u?.role === 'superadmin';
+          setIsAdminAuthenticated(isSuper);
+          if (isSuper) {
+            localStorage.setItem('simpandana_admin_auth', 'true');
+          } else {
+            localStorage.removeItem('simpandana_admin_auth');
+          }
+        } else {
+          setIsAdminAuthenticated(false);
+        }
+      } catch {
+        setIsAdminAuthenticated(false);
+      }
     }
   }, []);
 
