@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -123,25 +125,51 @@ export default function DashboardPage() {
         const parts = item.trim().split('=');
         return parts[0] === 'tatadana_user_id' && parts[1] && parts[1].trim().length > 0;
       });
+      const hasUserStorage = !!localStorage.getItem('tatadana_user');
 
-      const checkAuth = async () => {
-        try {
-          const { supabaseClient } = await import('@/lib/supabase/client');
-          const { data } = await supabaseClient.auth.getSession();
-          const hasSession = !!data?.session;
-          if (!hasSession && !hasUserIdCookie) {
-            router.replace('/login');
-          }
-        } catch {
-          if (!hasUserIdCookie) {
-            router.replace('/login');
+      if (!hasUserIdCookie && !hasUserStorage) {
+        router.replace('/login?error=unauthorized');
+        return;
+      }
+
+      // Sync user profile from storage if available
+      try {
+        const savedUserStr = localStorage.getItem('tatadana_user');
+        if (savedUserStr) {
+          const savedUser = JSON.parse(savedUserStr);
+          if (savedUser && savedUser.full_name) {
+            setProfile((prev) => ({
+              ...prev,
+              id: savedUser.id || prev.id,
+              full_name: savedUser.full_name || prev.full_name,
+              phone: savedUser.email || savedUser.phone || prev.phone,
+              plan: savedUser.plan || prev.plan,
+            }));
+            setProfileFullName(savedUser.full_name);
+            if (savedUser.phone && savedUser.phone !== '-') {
+              setProfilePhone(savedUser.phone);
+            }
           }
         }
-      };
-
-      checkAuth();
+      } catch (err) {
+        console.warn('Error reading saved user:', err);
+      }
     }
   }, [router]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('tatadana_user');
+      localStorage.removeItem('tatadana_session');
+      document.cookie = 'tatadana_user_id=; path=/; max-age=0';
+      document.cookie = 'tatadana_user_status=; path=/; max-age=0';
+      document.cookie = 'tatadana_demo_email=; path=/; max-age=0';
+      window.location.href = '/login';
+    }
+  };
 
   // Admin auth state check to hide admin link from regular users
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true);
@@ -1979,16 +2007,16 @@ ${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toL
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
               <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue">
-                LR
+                {(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
-              <div className="text-[11px] leading-tight">
-                <p className="font-bold text-white">Luki Ramdani</p>
-                <p className="text-slate-400">+62 812-3456</p>
+              <div className="text-[11px] leading-tight max-w-[120px]">
+                <p className="font-bold text-white truncate">{profile?.full_name || 'Pengguna'}</p>
+                <p className="text-slate-400 truncate">{profile?.phone || profile?.id}</p>
               </div>
             </div>
-            <Link href="/" className="text-slate-400 hover:text-rose-400" title="Keluar">
+            <button type="button" onClick={handleLogout} className="text-slate-400 hover:text-rose-400 cursor-pointer" title="Keluar">
               <LogOut className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -2067,16 +2095,16 @@ ${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toL
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
               <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue">
-                LR
+                {(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
-              <div className="text-[11px] leading-tight">
-                <p className="font-bold text-white">Luki Ramdani</p>
-                <p className="text-slate-400">+62 812-3456</p>
+              <div className="text-[11px] leading-tight max-w-[120px]">
+                <p className="font-bold text-white truncate">{profile?.full_name || 'Pengguna'}</p>
+                <p className="text-slate-400 truncate">{profile?.phone || profile?.id}</p>
               </div>
             </div>
-            <Link href="/" className="text-slate-400 hover:text-rose-400" title="Keluar">
+            <button type="button" onClick={handleLogout} className="text-slate-400 hover:text-rose-400 cursor-pointer" title="Keluar">
               <LogOut className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
