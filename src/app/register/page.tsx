@@ -26,6 +26,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [registeredData, setRegisteredData] = useState<{
+    fullName: string;
+    email: string;
+    status: string;
+  } | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,11 +95,12 @@ export default function RegisterPage() {
         }
       }
 
-      setSuccessMsg('Pendaftaran akun berhasil! Mengalihkan langsung ke Dashboard...');
-
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 500);
+      setRegisteredData({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        status: data.user?.approval_status || 'pending_approval',
+      });
+      setSuccessMsg('Pendaftaran akun berhasil! Status: Menunggu Persetujuan Super Admin.');
     } catch (err: any) {
       setErrorMsg(err.message || 'Pendaftaran gagal. Silakan periksa kembali data Anda.');
     } finally {
@@ -155,10 +161,12 @@ export default function RegisterPage() {
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] tracking-tight">
-              Daftar Akun Baru
+              {registeredData ? 'Status Pendaftaran Akun' : 'Daftar Akun Baru'}
             </h2>
             <p className="text-xs text-[#94A3B8] mt-1">
-              Lengkapi data di bawah ini untuk membuat akun SimpanUang Anda.
+              {registeredData
+                ? 'Informasi status pendaftaran dan persetujuan Super Admin.'
+                : 'Lengkapi data di bawah ini untuk membuat akun SimpanUang Anda.'}
             </p>
           </div>
 
@@ -171,15 +179,87 @@ export default function RegisterPage() {
           )}
 
           {/* Success Banner */}
-          {successMsg && (
+          {successMsg && !registeredData && (
             <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl text-emerald-300 text-xs font-semibold flex items-center space-x-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span className="leading-relaxed">{successMsg}</span>
             </div>
           )}
 
-          {/* Registration Form */}
-          <form onSubmit={handleRegister} className="space-y-4 text-xs">
+          {/* VIEW: MENUNGGU APPROVAL SUPER ADMIN DI MENU REGISTER */}
+          {registeredData ? (
+            <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-5 sm:p-6 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-4">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl font-bold shrink-0">
+                    ⏳
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white leading-tight">Menunggu Approval Super Admin</h3>
+                    <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-500/30">
+                      Pending Approval
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs">
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-slate-400">Nama Pengguna:</span>
+                    <span className="font-bold text-white">{registeredData.fullName}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-slate-400">Email:</span>
+                    <span className="font-mono text-cyan-300">{registeredData.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Verifikasi OTP:</span>
+                    <span className="text-emerald-400 font-bold">✓ Tanpa OTP (Langsung Terdaftar)</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-amber-200/90 leading-relaxed">
+                  Pendaftaran akun berhasil tanpa OTP. Akun Anda saat ini sedang <strong>menunggu persetujuan (approval) oleh Super Admin (lramdanie02@gmail.com)</strong> agar dapat digunakan sepenuhnya.
+                </p>
+
+                <div className="pt-2 flex flex-col gap-2.5">
+                  <a
+                    href="https://t.me/lukiramdani"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-lg"
+                  >
+                    <span>💬</span>
+                    <span>Hubungi Super Admin (Telegram)</span>
+                  </a>
+                  <Link
+                    href={`/login?email=${encodeURIComponent(registeredData.email)}`}
+                    className="w-full py-2.5 px-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-xs flex items-center justify-center transition-all"
+                  >
+                    Ke Halaman Masuk →
+                  </Link>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRegisteredData(null);
+                  setEmail('');
+                  setFullName('');
+                  setPassword('');
+                  setPasswordConfirm('');
+                  setSuccessMsg('');
+                  setErrorMsg('');
+                }}
+                className="w-full py-2 text-center text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer"
+              >
+                ← Daftarkan Akun Baru Lainnya
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Registration Form */}
+              <form onSubmit={handleRegister} className="space-y-4 text-xs">
             <div>
               <label className="block font-bold text-slate-300 mb-1.5 uppercase text-[10px] tracking-wider">
                 Nama Lengkap
@@ -286,6 +366,8 @@ export default function RegisterPage() {
               <span>Masuk dengan Email &amp; Password</span>
             </Link>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

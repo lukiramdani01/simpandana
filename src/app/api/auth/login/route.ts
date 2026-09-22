@@ -17,15 +17,6 @@ export async function POST(req: NextRequest) {
 
     const result = verifyCredentials({ email, password, credential });
 
-    if (result.requiresEmailVerification) {
-      return NextResponse.json({
-        ok: false,
-        requiresEmailVerification: true,
-        email: email.trim(),
-        error: 'Email Anda belum diverifikasi. Masukkan 6 digit kode OTP yang dikirim ke email.',
-      }, { status: 403 });
-    }
-
     if (!result.success || !result.user) {
       return NextResponse.json(
         { ok: false, error: result.error || 'Autentikasi gagal.' },

@@ -335,9 +335,9 @@ export function verifyCredentials(params: {
       salt: params.credential.salt,
       role: isSuper ? 'superadmin' : 'user',
       plan: params.credential.plan || 'starter',
-      approval_status: 'APPROVED',
+      approval_status: params.credential.approval_status || (isSuper ? 'APPROVED' : 'pending_approval'),
       is_active: true,
-      email_verified: params.credential.email_verified ?? (isSuper ? true : false),
+      email_verified: true,
       created_at: new Date().toISOString(),
     };
     users.set(emailClean, existingUser);
