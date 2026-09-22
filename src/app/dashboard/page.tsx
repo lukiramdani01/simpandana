@@ -66,6 +66,55 @@ import { Transaction, Wallet, Budget, Category } from '@/lib/types';
 import { generateBudgetProgressBar, parseTransactionFromText } from '@/lib/nlp-parser';
 import WalletLogo from '@/components/WalletLogo';
 
+const renderFormattedChatMessage = (text: string) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+
+  return lines.map((line, lIdx) => {
+    const parts: any[] = [];
+    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+    let match;
+    let lastIdx = 0;
+
+    while ((match = regex.exec(line)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(line.slice(lastIdx, match.index));
+      }
+      const raw = match[0];
+      if (raw.startsWith('**') && raw.endsWith('**')) {
+        parts.push(
+          <strong key={`${lIdx}-${match.index}`} className="font-extrabold text-white">
+            {raw.slice(2, -2)}
+          </strong>
+        );
+      } else if (raw.startsWith('*') && raw.endsWith('*')) {
+        parts.push(
+          <em key={`${lIdx}-${match.index}`} className="italic text-slate-300">
+            {raw.slice(1, -1)}
+          </em>
+        );
+      } else if (raw.startsWith('`') && raw.endsWith('`')) {
+        parts.push(
+          <code key={`${lIdx}-${match.index}`} className="bg-black/50 border border-white/10 px-1.5 py-0.5 rounded font-mono text-[11px] text-sky-300">
+            {raw.slice(1, -1)}
+          </code>
+        );
+      }
+      lastIdx = regex.lastIndex;
+    }
+
+    if (lastIdx < line.length) {
+      parts.push(line.slice(lastIdx));
+    }
+
+    return (
+      <div key={lIdx} className={lIdx > 0 ? 'mt-1' : ''}>
+        {parts.length > 0 ? parts : <span>&nbsp;</span>}
+      </div>
+    );
+  });
+};
+
 const BANK_INSTITUTIONS = [
   { id: 'bca', name: 'BCA (Bank Central Asia)', shortName: 'BCA', icon: '🏦', color: '#0060AF' },
   { id: 'mandiri', name: 'Bank Mandiri', shortName: 'Mandiri', icon: '🏦', color: '#003876' },
@@ -4678,7 +4727,7 @@ ${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toL
                     className={`max-w-[92%] sm:max-w-[80%] p-3.5 sm:p-4 rounded-2xl ${
                       m.sender === 'user'
                         ? 'apple-blue-gradient text-white rounded-tr-none shadow-lg'
-                        : 'bg-slate-900/90 text-slate-200 rounded-tl-none border border-white/10 whitespace-pre-wrap font-mono shadow-md'
+                        : 'bg-slate-900/90 text-slate-200 rounded-tl-none border border-white/10 whitespace-pre-wrap font-sans shadow-md'
                     }`}
                   >
                     <div className="text-[10px] text-slate-400 mb-1.5 flex items-center justify-between">
@@ -4690,7 +4739,7 @@ ${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toL
                         <img src={m.imageUrl} alt="Foto Struk" className="w-full h-auto object-cover max-h-64" />
                       </div>
                     )}
-                    <div className="leading-relaxed">{m.text}</div>
+                    <div className="leading-relaxed">{m.sender === 'user' ? m.text : renderFormattedChatMessage(m.text)}</div>
                     {m.pendingWalletChoice && (
                       <div className="mt-3 pt-3 border-t border-white/10 font-sans">
                         {m.pendingWalletChoice.completedWallet ? (
