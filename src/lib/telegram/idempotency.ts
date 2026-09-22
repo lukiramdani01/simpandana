@@ -5,7 +5,15 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-const inMemoryUpdateIds = new Set<number>();
+declare global {
+  var __inMemoryUpdateIds__: Set<number> | undefined;
+}
+
+if (!globalThis.__inMemoryUpdateIds__) {
+  globalThis.__inMemoryUpdateIds__ = new Set<number>();
+}
+
+export const inMemoryUpdateIds: Set<number> = globalThis.__inMemoryUpdateIds__;
 const MAX_CACHE_SIZE = 10000;
 
 export interface IdempotencyCheckResult {
