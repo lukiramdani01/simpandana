@@ -58,6 +58,7 @@ export async function middleware(request: NextRequest) {
     } as any;
   }
 
+  const userStatus = userStatusCookie || user?.user_metadata?.status || user?.app_metadata?.status;
   const pathname = request.nextUrl.pathname;
 
   // Check if route is a public unauthenticated route
@@ -72,12 +73,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/');
 
   // Redirect PENDING users trying to access non-pending routes to /pending-approval
-  if (user && userStatusCookie === 'PENDING' && pathname !== '/pending-approval' && !pathname.startsWith('/api/') && !pathname.startsWith('/auth/')) {
+  if (user && userStatus === 'PENDING' && pathname !== '/pending-approval' && !pathname.startsWith('/api/') && !pathname.startsWith('/auth/')) {
     return NextResponse.redirect(new URL('/pending-approval', request.url));
   }
 
   // Redirect authenticated APPROVED user from /login or /register to /dashboard
-  if (user && userStatusCookie !== 'PENDING' && (pathname === '/login' || pathname === '/register')) {
+  if (user && userStatus !== 'PENDING' && (pathname === '/login' || pathname === '/register')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

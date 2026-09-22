@@ -119,7 +119,10 @@ export default function DashboardPage() {
   // Client-side authentication guard: enforce login check
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hasUserIdCookie = document.cookie.split('; ').some((item) => item.trim().startsWith('tatadana_user_id='));
+      const hasUserIdCookie = document.cookie.split('; ').some((item) => {
+        const parts = item.trim().split('=');
+        return parts[0] === 'tatadana_user_id' && parts[1] && parts[1].trim().length > 0;
+      });
 
       const checkAuth = async () => {
         try {
