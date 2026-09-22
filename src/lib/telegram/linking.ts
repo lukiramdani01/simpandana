@@ -54,9 +54,13 @@ export const autoLinkedTgUserIds: Set<number> = globalThis.__autoLinkedTgUserIds
 import { resolveActiveBotToken } from '@/lib/telegram/tokenStore';
 
 /**
- * Sends outbound Telegram message helper
+ * Sends outbound Telegram message helper with optional Inline Keyboard reply_markup
  */
-export async function sendOutboundTelegramMessage(chatId: number | null | undefined, text: string) {
+export async function sendOutboundTelegramMessage(
+  chatId: number | null | undefined,
+  text: string,
+  replyMarkup?: any
+) {
   if (!chatId || !text) return;
   const token = await resolveActiveBotToken();
   if (!token || token.startsWith('mock-')) {
@@ -68,14 +72,19 @@ export async function sendOutboundTelegramMessage(chatId: number | null | undefi
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
+    const payload: any = {
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+    };
+    if (replyMarkup) {
+      payload.reply_markup = replyMarkup;
+    }
+
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
     clearTimeout(timeout);

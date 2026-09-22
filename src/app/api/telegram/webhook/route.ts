@@ -120,6 +120,77 @@ export async function POST(req: NextRequest) {
   }
 
   if (!message) {
+    // 0. Callback Query Handling (Telegram Inline Keyboard Wallet Selection like Tata AI)
+    const callbackQuery = body.callback_query;
+    if (callbackQuery) {
+      const cbId = callbackQuery.id;
+      const cbFromId = callbackQuery.from?.id;
+      const cbChatId = callbackQuery.message?.chat?.id;
+      const cbMsgId = callbackQuery.message?.message_id;
+      const cbData = callbackQuery.data || '';
+
+      if (cbData.startsWith('tx_w_')) {
+        const parts = cbData.split('_');
+        const targetWalletId = parts[2];
+        const amount = Number(parts[3]) || 0;
+        const type = (parts[4] || 'expense') as 'income' | 'expense' | 'transfer';
+        const notes = parts.slice(5).join('_') || 'Transaksi Telegram';
+
+        const cbUser = await resolveUserProfile(cbFromId, cbChatId, callbackQuery.from, false);
+        if (cbUser && amount > 0) {
+          let walletName = 'BCA Utama';
+          if (targetWalletId === 'w-1') walletName = 'BCA Utama';
+          else if (targetWalletId === 'w-2') walletName = 'Mandiri Tabungan';
+          else if (targetWalletId === 'w-3') walletName = 'GoPay';
+          else if (targetWalletId === 'w_cash') walletName = 'Tunai (Cash)';
+
+          const recordRes = await recordTransactionInStore({
+            userId: cbUser.id,
+            walletId: targetWalletId,
+            walletName: walletName,
+            type: type,
+            amount: amount,
+            notes: notes,
+            source: 'telegram',
+            date: getWIBDateString(),
+            telegramUpdateId: updateId,
+          });
+
+          const activeBotToken = await resolveActiveBotToken();
+          if (activeBotToken && !activeBotToken.startsWith('mock-')) {
+            try {
+              await fetch(`https://api.telegram.org/bot${activeBotToken}/answerCallbackQuery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  callback_query_id: cbId,
+                  text: `✅ Saldo ${walletName} berhasil diperbarui!`,
+                }),
+              });
+
+              await fetch(`https://api.telegram.org/bot${activeBotToken}/editMessageText`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: cbChatId,
+                  message_id: cbMsgId,
+                  text: `✅ <b>Pengeluaran Rp${amount.toLocaleString('id-ID')} (${walletName}) Berhasil Dicatat!</b>\n\n📝 <b>Catatan:</b> ${notes}\n💳 <b>Sisa Saldo ${walletName}:</b> Rp${recordRes.balanceAfter.toLocaleString('id-ID')}`,
+                  parse_mode: 'HTML',
+                }),
+              });
+            } catch {}
+          }
+
+          return NextResponse.json({
+            ok: true,
+            status: 'COMPLETED',
+            message: `Transaction recorded into wallet ${walletName}`,
+            balanceAfter: recordRes.balanceAfter,
+          });
+        }
+      }
+    }
+
     addStep('COMPLETED', 'Empty message ignored');
     return NextResponse.json({ ok: true, ignored: true, status: 'COMPLETED' });
   }
@@ -142,12 +213,11 @@ export async function POST(req: NextRequest) {
   }
   const headerToken = req.headers.get('x-telegram-bot-token') || undefined;
 
-  // Respond Helper with dynamic latency measurement (asynchronous dispatch for sub-second SLA)
-  const sendReply = async (replyText: string): Promise<number> => {
+  // Respond Helper with dynamic latency measurement
+  const sendReply = async (replyText: string, replyMarkup?: any): Promise<number> => {
     const tStart = performance.now();
     if (chatId && replyText) {
-      // Fire-and-forget asynchronously so it does not block the webhook sub-second response
-      sendOutboundTelegramMessage(chatId, replyText).catch(() => {});
+      sendOutboundTelegramMessage(chatId, replyText, replyMarkup).catch(() => {});
     }
     return Math.max(1, Math.round(performance.now() - tStart));
   };
