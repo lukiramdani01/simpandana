@@ -197,10 +197,10 @@ export default function LandingPage() {
               Masuk Akun
             </Link>
             <Link
-              href="/login?mode=demo"
+              href="/register"
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold apple-blue-gradient text-white shadow-lg glow-blue hover:brightness-110 transition-all flex items-center space-x-1.5"
             >
-              <span>Coba Demo Gratis</span>
+              <span>Daftar Akun</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -233,15 +233,15 @@ export default function LandingPage() {
               href="/login"
               className="w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-extrabold apple-blue-gradient text-white shadow-xl glow-blue hover:brightness-110 transition-all flex items-center justify-center space-x-2"
             >
-              <span>Mulai Sekarang</span>
+              <span>Masuk</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/login?mode=register"
+              href="/register"
               className="w-full sm:w-auto px-7 py-4 rounded-2xl text-sm font-bold liquid-glass hover:bg-white/10 text-white border border-white/10 shadow-sm transition-all flex items-center justify-center space-x-2"
             >
               <Sparkles className="w-4 h-4 text-[#2997FF]" />
-              <span>Daftar</span>
+              <span>Daftar Baru</span>
             </Link>
             <a
               href="#demo"

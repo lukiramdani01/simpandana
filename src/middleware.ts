@@ -60,36 +60,39 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Allow public access to demo, login, register, pending-approval
-  if (
-    pathname === '/demo' ||
+  // Check if route is a public unauthenticated route
+  const isPublicRoute =
+    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/register' ||
+    pathname === '/demo' ||
     pathname === '/pending-approval' ||
-    pathname.startsWith('/api/')
-  ) {
-    if (userStatusCookie === 'PENDING' && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/pending-approval', request.url));
-    }
+    pathname === '/forgot-password' ||
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/api/');
+
+  // Redirect PENDING users trying to access non-pending routes to /pending-approval
+  if (user && userStatusCookie === 'PENDING' && pathname !== '/pending-approval' && !pathname.startsWith('/api/') && !pathname.startsWith('/auth/')) {
+    return NextResponse.redirect(new URL('/pending-approval', request.url));
+  }
+
+  // Redirect authenticated APPROVED user from /login or /register to /dashboard
+  if (user && userStatusCookie !== 'PENDING' && (pathname === '/login' || pathname === '/register')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // If route is public, allow access
+  if (isPublicRoute) {
     return response;
   }
 
-  // Redirect PENDING users trying to access protected routes to /pending-approval
-  if (userStatusCookie === 'PENDING' && pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/pending-approval', request.url));
+  // Strictly require authentication for all non-public protected routes (e.g. /dashboard, /admin)
+  if (!user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // Protect /admin routes (superadmin required)
   if (pathname.startsWith('/admin')) {
-    if (process.env.ALLOW_DEV_BYPASS === 'true') {
-      return response;
-    }
-    if (!user) {
-      const redirectUrl = new URL('/login', request.url);
-      redirectUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -99,20 +102,6 @@ export async function middleware(request: NextRequest) {
     if (profile?.role !== 'superadmin') {
       return NextResponse.redirect(new URL('/dashboard?error=unauthorized', request.url));
     }
-  }
-
-  // Protect /dashboard routes in production or strict mode
-  if (pathname.startsWith('/dashboard') && !user) {
-    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_BYPASS !== 'true') {
-      const redirectUrl = new URL('/login', request.url);
-      redirectUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-  }
-
-  // Redirect authenticated user from /login to /dashboard if APPROVED
-  if (pathname === '/login' && user && userStatusCookie !== 'PENDING') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return response;

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -112,8 +113,33 @@ function getWIBDateDaysAgo(days: number): string {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'beranda' | 'transaksi' | 'laporan' | 'budget' | 'wallet' | 'settings' | 'admin' | 'bot_sim'>('beranda');
   
+  // Client-side authentication guard: enforce login check
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasUserIdCookie = document.cookie.split('; ').some((item) => item.trim().startsWith('tatadana_user_id='));
+
+      const checkAuth = async () => {
+        try {
+          const { supabaseClient } = await import('@/lib/supabase/client');
+          const { data } = await supabaseClient.auth.getSession();
+          const hasSession = !!data?.session;
+          if (!hasSession && !hasUserIdCookie) {
+            router.replace('/login');
+          }
+        } catch {
+          if (!hasUserIdCookie) {
+            router.replace('/login');
+          }
+        }
+      };
+
+      checkAuth();
+    }
+  }, [router]);
+
   // Admin auth state check to hide admin link from regular users
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true);
 
