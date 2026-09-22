@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { email, password } = body || {};
+    const { email, password, credential } = body || {};
 
     if (!email || !password) {
       return NextResponse.json(
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = verifyCredentials({ email, password });
+    const result = verifyCredentials({ email, password, credential });
 
     if (!result.success || !result.user) {
       return NextResponse.json(

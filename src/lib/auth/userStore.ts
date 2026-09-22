@@ -85,7 +85,23 @@ export function registerUser(params: {
   password: string;
   full_name: string;
   phone?: string;
-}): { success: boolean; user?: Omit<RegisteredUser, 'passwordHash' | 'salt'>; error?: string } {
+}): {
+  success: boolean;
+  user?: Omit<RegisteredUser, 'passwordHash' | 'salt'>;
+  credential?: {
+    id: string;
+    email: string;
+    full_name: string;
+    passwordHash: string;
+    salt: string;
+    role: string;
+    plan: string;
+    approval_status: string;
+    is_active: boolean;
+    created_at: string;
+  };
+  error?: string;
+} {
   const emailClean = params.email.trim().toLowerCase();
   const nameClean = params.full_name.trim();
 
@@ -131,7 +147,22 @@ export function registerUser(params: {
   saveUsers();
 
   const { passwordHash: _, salt: __, ...safeUser } = newUser;
-  return { success: true, user: safeUser };
+  return {
+    success: true,
+    user: safeUser,
+    credential: {
+      id: newUser.id,
+      email: newUser.email,
+      full_name: newUser.full_name,
+      passwordHash: newUser.passwordHash,
+      salt: newUser.salt,
+      role: newUser.role,
+      plan: newUser.plan,
+      approval_status: newUser.approval_status,
+      is_active: newUser.is_active,
+      created_at: newUser.created_at,
+    },
+  };
 }
 
 /**
@@ -140,6 +171,15 @@ export function registerUser(params: {
 export function verifyCredentials(params: {
   email: string;
   password: string;
+  credential?: {
+    id?: string;
+    email?: string;
+    full_name?: string;
+    passwordHash?: string;
+    salt?: string;
+    role?: any;
+    plan?: any;
+  } | null;
 }): { success: boolean; user?: Omit<RegisteredUser, 'passwordHash' | 'salt'>; error?: string } {
   const emailClean = params.email.trim().toLowerCase();
 
@@ -148,7 +188,30 @@ export function verifyCredentials(params: {
   }
 
   const users = loadUsers();
-  const existingUser = users.get(emailClean);
+  let existingUser = users.get(emailClean);
+
+  if (
+    !existingUser &&
+    params.credential &&
+    params.credential.email?.toLowerCase() === emailClean &&
+    params.credential.passwordHash &&
+    params.credential.salt
+  ) {
+    existingUser = {
+      id: params.credential.id || `usr-${Date.now()}`,
+      email: emailClean,
+      full_name: params.credential.full_name || emailClean.split('@')[0],
+      passwordHash: params.credential.passwordHash,
+      salt: params.credential.salt,
+      role: params.credential.role || 'user',
+      plan: params.credential.plan || 'starter',
+      approval_status: 'APPROVED',
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    users.set(emailClean, existingUser);
+    saveUsers();
+  }
 
   if (!existingUser) {
     return {

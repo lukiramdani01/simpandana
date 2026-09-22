@@ -66,6 +66,17 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Pendaftaran gagal. Silakan coba lagi.');
       }
 
+      if (typeof window !== 'undefined' && data.credential) {
+        try {
+          const raw = localStorage.getItem('tatadana_registered_accounts');
+          const accounts = raw ? JSON.parse(raw) : {};
+          accounts[email.trim().toLowerCase()] = data.credential;
+          localStorage.setItem('tatadana_registered_accounts', JSON.stringify(accounts));
+        } catch (e) {
+          console.warn('Could not cache registered account locally', e);
+        }
+      }
+
       setSuccessMsg('Pendaftaran akun berhasil! Mengalihkan ke halaman masuk...');
 
       setTimeout(() => {

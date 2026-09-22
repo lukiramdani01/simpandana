@@ -65,12 +65,26 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      let clientCredential = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('tatadana_registered_accounts');
+          if (raw) {
+            const accounts = JSON.parse(raw);
+            clientCredential = accounts[email.trim().toLowerCase()] || null;
+          }
+        } catch (e) {
+          console.warn('Error reading local accounts', e);
+        }
+      }
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),
           password,
+          credential: clientCredential,
         }),
       });
 

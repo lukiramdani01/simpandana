@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         message: 'Registrasi berhasil! Silakan login dengan akun yang telah dibuat.',
         user: result.user,
+        credential: result.credential,
       },
       { status: 201 }
     );
