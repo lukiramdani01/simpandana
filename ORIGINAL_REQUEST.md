@@ -81,7 +81,7 @@ Integrity mode: development
 ## Requirements
 
 ### R1. Telegram Bot Auto-Poller & Sub-Second Processing
-Sub-second natural language processing for text, voice notes, and receipt OCR transactions sent to @TugasLukiBot, with silent background auto-polling and persistent bot token resolution.
+Sub-second natural language processing for text, voice notes, and receipt OCR transactions sent to @Rumahluki01bot, with silent background auto-polling and persistent bot token resolution.
 
 ### R2. Reactive Multi-Wallet Dashboard Synchronization
 Instant real-time update of total balance, wallet balances, recent transaction history table, and category budget progress bars on /dashboard upon receiving any Telegram transaction.

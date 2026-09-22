@@ -1431,7 +1431,7 @@ ${itemListText}
   };
 
   const handleCopyLink = () => {
-    const link = `https://t.me/TugasLukiBot?start=link_${profile.id}`;
+    const link = `https://t.me/Rumahluki01bot?start=link_${profile.id}`;
     navigator.clipboard?.writeText(link);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
@@ -3804,7 +3804,7 @@ ${isExp ? '💸 Pengeluaran' : '💰 Pemasukan'} sebesar **Rp${parsed.amount.toL
                   <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-[11px] font-bold text-blue-400 uppercase">Tautan Deep-Link Pairing</div>
-                      <div className="font-mono text-xs text-slate-200 mt-0.5">https://t.me/TugasLukiBot?start=link_{profile.id}</div>
+                      <div className="font-mono text-xs text-slate-200 mt-0.5">https://t.me/Rumahluki01bot?start=link_{profile.id}</div>
                     </div>
                     <button
                       type="button"

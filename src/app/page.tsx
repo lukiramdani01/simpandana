@@ -404,7 +404,7 @@ export default function LandingPage() {
                       <span>SimpanUang Official Bot</span>
                       <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                     </div>
-                    <div className="text-[11px] text-slate-400">@TugasLukiBot • bot online</div>
+                    <div className="text-[11px] text-slate-400">@Rumahluki01bot • bot online</div>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-[#2997FF] border border-blue-500/30">

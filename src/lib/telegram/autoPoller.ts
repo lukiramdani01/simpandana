@@ -12,6 +12,8 @@ declare global {
   var __telegramAutoPollerIsPolling__: boolean | undefined;
 }
 
+let isPollingRunning = false;
+
 export function ensureTelegramAutoPoller() {
   if (typeof window !== 'undefined') return; // Server-side only
   if (process.env.NEXT_PHASE === 'phase-production-build') return; // Don't run during build
@@ -20,7 +22,7 @@ export function ensureTelegramAutoPoller() {
   globalThis.__telegramAutoPollerStarted__ = true;
   globalThis.__telegramAutoPollerIsPolling__ = false;
 
-  console.log('[Telegram Auto-Poller] Active sequential locked polling daemon (1.0s sequential loop)...');
+  console.log('[Telegram Auto-Poller] Active sequential locked polling daemon (2.0s sequential loop)...');
 
   const pollLoop = async () => {
     try {
@@ -57,15 +59,17 @@ export function ensureTelegramAutoPoller() {
   };
 
   const runPollCycle = async () => {
-    if (globalThis.__telegramAutoPollerIsPolling__) return;
+    if (isPollingRunning || globalThis.__telegramAutoPollerIsPolling__) return;
+    isPollingRunning = true;
     globalThis.__telegramAutoPollerIsPolling__ = true;
     try {
       await pollLoop();
     } finally {
+      isPollingRunning = false;
       globalThis.__telegramAutoPollerIsPolling__ = false;
       // Schedule next poll cycle sequentially after previous finishes to guarantee no overlapping 409 conflict
       if (globalThis.__telegramAutoPollerStarted__) {
-        globalThis.__telegramAutoPollerTimer__ = setTimeout(runPollCycle, 1000);
+        globalThis.__telegramAutoPollerTimer__ = setTimeout(runPollCycle, 2000);
       }
     }
   };

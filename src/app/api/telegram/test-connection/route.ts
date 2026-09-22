@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         id: 7293849182,
         is_bot: true,
         first_name: 'SimpanUang Official Bot',
-        username: 'TugasLukiBot',
+        username: 'Rumahluki01bot',
         can_join_groups: true,
         can_read_all_group_messages: false,
         supports_inline_queries: false,
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       targetChatIds.add(182938491);
     }
 
-    const botUsername = botInfo?.username || 'TugasLukiBot';
+    const botUsername = botInfo?.username || 'Rumahluki01bot';
     const outboundText = `✅ <b>Koneksi & Sync Telegram Berhasil!</b>\n\nBot @${botUsername} berhasil terhubung dengan Dashboard SimpanUang. Transaksi Anda akan langsung dicatat secara real-time!`;
 
     if (cleanToken && !cleanToken.startsWith('mock-')) {
