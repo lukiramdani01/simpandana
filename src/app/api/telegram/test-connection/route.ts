@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { encryptToken, decryptToken } from '@/lib/crypto';
 import { setActiveBotToken, resolveActiveBotToken } from '@/lib/telegram/tokenStore';

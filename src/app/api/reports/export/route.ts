@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { generateExportReport } from '@/lib/export/engine';
 import { initialTransactions } from '@/lib/mock-data';
 

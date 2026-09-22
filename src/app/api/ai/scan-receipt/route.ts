@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { extractReceiptVision } from '@/lib/ai/ocr';
 
 export async function POST(req: NextRequest) {
