@@ -56,7 +56,46 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, userId, isActive } = body || {};
+    const { action, userId, isActive, user } = body || {};
+
+    if (action === 'register') {
+      const regUser = user || {};
+      const regId = regUser.id || userId || `usr-${Date.now()}`;
+      const fullName = regUser.full_name || 'Pengguna Baru';
+      const nowIso = regUser.created_at || new Date().toISOString();
+
+      // Store in server memory
+      pendingUsersMemoryStore.unshift({
+        id: regId,
+        full_name: fullName,
+        telegram_username: regUser.telegram_username || null,
+        telegram_user_id: regUser.telegram_user_id || 0,
+        telegram_chat_id: regUser.telegram_chat_id || 0,
+        approval_status: 'pending_approval',
+        is_active: false,
+        registered_at: nowIso,
+      });
+
+      // Try inserting into Supabase DB
+      try {
+        await supabaseAdmin.from('profiles').insert({
+          id: regId,
+          full_name: fullName,
+          plan: 'starter',
+          approval_status: 'pending_approval' as any,
+          is_active: false,
+          created_at: nowIso,
+        });
+      } catch (dbErr) {
+        // Fallback to memory store if DB fails
+      }
+
+      return NextResponse.json({
+        ok: true,
+        message: `Pendaftaran pengguna ${fullName} berhasil dicatat. Menunggu persetujuan Admin.`,
+        userId: regId,
+      });
+    }
 
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json({ ok: false, error: 'userId wajib diisi' }, { status: 400 });

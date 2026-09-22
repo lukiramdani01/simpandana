@@ -134,24 +134,24 @@ test('M2: Indonesian Nominal & Type Extraction (src/lib/parser/nominal)', async 
 });
 
 // =========================================================================
-// Group 3: Starter Quota 50 tx/month Enforcement (src/lib/quota.ts)
+// Group 3: Starter Quota 100 tx/month Enforcement (src/lib/quota.ts)
 // =========================================================================
-test('M2: Starter Quota 50 tx/month Enforcement (src/lib/quota)', async (t) => {
-  await t.test('allows transaction when count < 50', () => {
-    const q49 = checkStarterQuota(49);
-    assert.strictEqual(q49.allowed, true);
-    assert.strictEqual(q49.remaining, 1);
-    assert.strictEqual(q49.error, null);
+test('M2: Starter Quota 100 tx/month Enforcement (src/lib/quota)', async (t) => {
+  await t.test('allows transaction when count < 100', () => {
+    const q99 = checkStarterQuota(99);
+    assert.strictEqual(q99.allowed, true);
+    assert.strictEqual(q99.remaining, 1);
+    assert.strictEqual(q99.error, null);
   });
 
-  await t.test('blocks transaction when count >= 50', () => {
-    const q50 = checkStarterQuota(50);
-    assert.strictEqual(q50.allowed, false);
-    assert.strictEqual(q50.remaining, 0);
-    assert.match(q50.error, /50 transaksi/);
+  await t.test('blocks transaction when count >= 100', () => {
+    const q100 = checkStarterQuota(100);
+    assert.strictEqual(q100.allowed, false);
+    assert.strictEqual(q100.remaining, 0);
+    assert.match(q100.error, /100 transaksi/);
 
-    const q51 = checkStarterQuota(51);
-    assert.strictEqual(q51.allowed, false);
+    const q101 = checkStarterQuota(101);
+    assert.strictEqual(q101.allowed, false);
   });
 
   await t.test('pro plan bypasses limit', () => {

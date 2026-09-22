@@ -50,6 +50,15 @@ export default function RegisterPage() {
         created_at: new Date().toISOString(),
       };
 
+      // Post registration data to backend API so Admin panel can approve/reject
+      try {
+        await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'register', user: newUser }),
+        });
+      } catch {}
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('tatadana_user', JSON.stringify(newUser));
         localStorage.setItem(

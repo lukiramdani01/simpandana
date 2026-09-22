@@ -13,7 +13,7 @@ export interface QuotaCheckResult {
   error: string | null;
 }
 
-export const STARTER_MONTHLY_LIMIT = 50;
+export const STARTER_MONTHLY_LIMIT = 100;
 
 /**
  * Check Starter quota against the current monthly transaction count
@@ -25,7 +25,7 @@ export function checkStarterQuota(currentCount: number): QuotaCheckResult {
     count: currentCount,
     limit: LIMIT,
     remaining: Math.max(0, LIMIT - currentCount),
-    error: currentCount >= LIMIT ? 'Batas kuota 50 transaksi Starter tercapai' : null,
+    error: currentCount >= LIMIT ? `Batas kuota ${LIMIT} transaksi Starter tercapai` : null,
   };
 }
 

@@ -23,7 +23,8 @@ export const transactionsMemoryStore: Transaction[] = globalThis.__transactionsM
 
 export async function getAllTransactions(userId: string = 'usr-101'): Promise<Transaction[]> {
   const activeUserId = userId || 'usr-101';
-  const tgUserIdStr = initialProfile.telegram_user_id ? String(initialProfile.telegram_user_id) : '';
+  const isPrimaryUser = activeUserId === 'usr-101';
+  const tgUserIdStr = isPrimaryUser && initialProfile.telegram_user_id ? String(initialProfile.telegram_user_id) : '';
 
   try {
     let query = supabaseAdmin
@@ -31,9 +32,9 @@ export async function getAllTransactions(userId: string = 'usr-101'): Promise<Tr
       .select('id, user_id, wallet_id, category_id, type, amount, date, notes, source, created_at, wallets(name), categories(name, icon)');
 
     if (tgUserIdStr && tgUserIdStr !== activeUserId) {
-      query = query.or(`user_id.eq.${activeUserId},user_id.eq.usr-101,user_id.eq.${tgUserIdStr}`);
+      query = query.or(`user_id.eq.${activeUserId},user_id.eq.${tgUserIdStr}`);
     } else {
-      query = query.or(`user_id.eq.${activeUserId},user_id.eq.usr-101`);
+      query = query.eq('user_id', activeUserId);
     }
 
     const { data, error } = await withDbTimeout(
@@ -69,9 +70,7 @@ export async function getAllTransactions(userId: string = 'usr-101'): Promise<Tr
     const dbIds = new Set(dbTxs.map((t) => t.id));
     const extraMem = transactionsMemoryStore.filter(
       (t) =>
-        (!t.user_id ||
-          t.user_id === activeUserId ||
-          t.user_id === 'usr-101' ||
+        (t.user_id === activeUserId ||
           (tgUserIdStr && String(t.user_id) === tgUserIdStr)) &&
         !dbIds.has(t.id)
     );
@@ -84,10 +83,8 @@ export async function getAllTransactions(userId: string = 'usr-101'): Promise<Tr
 
   const result = transactionsMemoryStore.filter(
     (t) =>
-      !t.user_id ||
       t.user_id === activeUserId ||
-      t.user_id === 'usr-101' ||
-      (initialProfile.telegram_user_id && String(t.user_id) === String(initialProfile.telegram_user_id))
+      (tgUserIdStr && String(t.user_id) === tgUserIdStr)
   );
   result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   return result;
