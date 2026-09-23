@@ -178,6 +178,9 @@ export default function DashboardPage() {
         setActiveTab('transaksi');
       } else if (tabParam === 'laporan') {
         setActiveTab('laporan');
+        if (params.get('open_upgrade') === '1') {
+          setShowUpgradeModal(true);
+        }
       } else if (tabParam === 'budget') {
         setActiveTab('budget');
         if (params.get('open_budget') === '1') {
