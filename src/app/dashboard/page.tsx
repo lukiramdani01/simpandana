@@ -232,17 +232,22 @@ export default function DashboardPage() {
           }
 
           if (savedUser && savedUser.full_name) {
+            const userPhone = savedUser.phone && savedUser.phone !== '-' && !savedUser.phone.includes('@')
+              ? savedUser.phone
+              : '+62 812-****-****';
             setProfile((prev) => ({
               ...prev,
               id: savedUser.id || prev.id,
               full_name: savedUser.full_name || prev.full_name,
-              phone: savedUser.email || savedUser.phone || prev.phone,
+              phone: userPhone,
+              avatar_url: savedUser.avatar_url || prev.avatar_url,
               plan: savedUser.plan || prev.plan,
               approval_status: savedUser.approval_status || prev.approval_status,
             }));
             setProfileFullName(savedUser.full_name);
-            if (savedUser.phone && savedUser.phone !== '-') {
-              setProfilePhone(savedUser.phone);
+            setProfilePhone(userPhone);
+            if (savedUser.avatar_url) {
+              setProfileAvatar(savedUser.avatar_url);
             }
           }
         }
@@ -547,10 +552,12 @@ export default function DashboardPage() {
 
   // Profile Form States
   const [profileFullName, setProfileFullName] = useState(profile.full_name);
-  const [profilePhone, setProfilePhone] = useState(profile.phone);
+  const [profilePhone, setProfilePhone] = useState(profile.phone || '+62 812-****-****');
+  const [profileAvatar, setProfileAvatar] = useState(profile.avatar_url || '');
   const [profileCurrency, setProfileCurrency] = useState(profile.default_currency || 'IDR');
   const [profileTimezone, setProfileTimezone] = useState(profile.timezone || 'Asia/Jakarta');
   const [profileSavedFeedback, setProfileSavedFeedback] = useState(false);
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
 
   // Daily Reminder States (WIB)
   const [reminderActive, setReminderActive] = useState(true);
@@ -1788,9 +1795,25 @@ ${itemListText}
       ...prev,
       full_name: profileFullName,
       phone: profilePhone,
+      avatar_url: profileAvatar,
       default_currency: profileCurrency,
       timezone: profileTimezone,
     }));
+
+    // Update in localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const savedUserStr = localStorage.getItem('tatadana_user');
+        if (savedUserStr) {
+          const userObj = JSON.parse(savedUserStr);
+          userObj.full_name = profileFullName;
+          userObj.phone = profilePhone;
+          userObj.avatar_url = profileAvatar;
+          localStorage.setItem('tatadana_user', JSON.stringify(userObj));
+        }
+      } catch {}
+    }
+
     setProfileSavedFeedback(true);
     setTimeout(() => setProfileSavedFeedback(false), 3000);
   };
@@ -2426,12 +2449,16 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue">
-                {(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue overflow-hidden shrink-0">
+                {profileAvatar ? (
+                  <img src={profileAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                )}
               </div>
               <div className="text-[11px] leading-tight max-w-[120px]">
                 <p className="font-bold text-white truncate">{profile?.full_name || 'Pengguna'}</p>
-                <p className="text-slate-400 truncate">{profile?.phone || profile?.id}</p>
+                <p className="text-slate-400 truncate">{profilePhone || profile?.phone || '+62 812-****-****'}</p>
               </div>
             </div>
             <button type="button" onClick={handleLogout} className="text-slate-400 hover:text-rose-400 cursor-pointer" title="Keluar">
@@ -2544,12 +2571,16 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue">
-                {(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              <div className="w-8 h-8 rounded-full apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow glow-blue overflow-hidden shrink-0">
+                {profileAvatar ? (
+                  <img src={profileAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(profile?.full_name || 'User').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                )}
               </div>
               <div className="text-[11px] leading-tight max-w-[120px]">
                 <p className="font-bold text-white truncate">{profile?.full_name || 'Pengguna'}</p>
-                <p className="text-slate-400 truncate">{profile?.phone || profile?.id}</p>
+                <p className="text-slate-400 truncate">{profilePhone || profile?.phone || '+62 812-****-****'}</p>
               </div>
             </div>
             <button type="button" onClick={handleLogout} className="text-slate-400 hover:text-rose-400 cursor-pointer" title="Keluar">
@@ -2621,11 +2652,18 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
 
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
-              className="w-9 h-9 rounded-2xl apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow-md glow-blue hover:brightness-110 transition-all border border-white/20 shrink-0"
-              title="Pengaturan Profil (Luki Ramdani)"
+              onClick={() => {
+                setActiveTab('settings');
+                setSettingsSubTab('profil');
+              }}
+              className="w-9 h-9 rounded-2xl apple-blue-gradient text-white font-bold flex items-center justify-center text-xs shadow-md glow-blue hover:brightness-110 transition-all border border-white/20 shrink-0 overflow-hidden"
+              title={`Pengaturan Profil (${profileFullName || profile.full_name})`}
             >
-              LR
+              {profileAvatar ? (
+                <img src={profileAvatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span>{(profileFullName || profile.full_name || 'U').charAt(0).toUpperCase()}</span>
+              )}
             </button>
           </div>
         </header>
@@ -4314,7 +4352,96 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                     </div>
                   )}
 
-                  <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+                  <form onSubmit={handleSaveProfile} className="space-y-5 text-xs">
+                    {/* FOTO PROFIL SECTION (LUCU & INTERAKTIF) */}
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-center gap-4">
+                      <div className="relative group shrink-0">
+                        {profileAvatar ? (
+                          <img
+                            src={profileAvatar}
+                            alt="Foto Profil"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 shadow-lg glow-blue"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full apple-blue-gradient text-white font-black text-2xl flex items-center justify-center border-2 border-blue-400 shadow-lg glow-blue">
+                            {(profileFullName || 'U').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          <span>📷</span>
+                          <span>Ubah</span>
+                        </button>
+                      </div>
+
+                      <div className="flex-1 text-center sm:text-left space-y-2">
+                        <div>
+                          <h4 className="font-extrabold text-white text-sm">Foto Profil Akun</h4>
+                          <p className="text-[11px] text-slate-400">Pilih avatar lucu atau unggah foto selfie / gambar favorit Anda.</p>
+                        </div>
+
+                        {/* Pilihan Avatar Lucu Cepat */}
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                          {[
+                            '🐱', '🐼', '🦊', '🦁', '🐸', '🚀', '⭐', '💎'
+                          ].map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => {
+                                // Create data URL SVG of the emoji for cute instant avatar
+                                const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="64" fill="#0F172A"/><text x="50%" y="54%" font-size="70" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
+                                const uri = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+                                setProfileAvatar(uri);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-base flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+                              title={`Gunakan avatar ${emoji}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="px-2.5 py-1 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[10px] font-bold transition-all ml-1"
+                          >
+                            📁 Unggah Foto
+                          </button>
+
+                          {profileAvatar && (
+                            <button
+                              type="button"
+                              onClick={() => setProfileAvatar('')}
+                              className="px-2 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] font-bold"
+                            >
+                              Hapus
+                            </button>
+                          )}
+                        </div>
+
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setProfileAvatar(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-bold text-slate-300 mb-1">Nama Lengkap</label>
@@ -4334,9 +4461,10 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                           value={profilePhone}
                           onChange={(e) => setProfilePhone(e.target.value)}
                           required
-                          className="w-full p-3 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-medium"
-                          placeholder="+62 812-3456-7890"
+                          className="w-full p-3 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-mono font-medium"
+                          placeholder="+62 812-****-****"
                         />
+                        <span className="text-[10px] text-slate-400 mt-1 block">Contoh: +62 812-****-**** (Nomor disamarkan demi privasi).</span>
                       </div>
                     </div>
 
