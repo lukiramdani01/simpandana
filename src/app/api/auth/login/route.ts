@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 365, // 1 year persistent session (tidak perlu login ulang saat update)
     };
 
     response.cookies.set('tatadana_user_id', user.id, cookieOptions);

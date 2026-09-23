@@ -195,6 +195,7 @@ export default function DashboardPage() {
       });
       const hasUserStorage = !!localStorage.getItem('tatadana_user');
 
+      // Selama ada session cookie atau localStorage, jangan tendang user keluar
       if (!hasUserIdCookie && !hasUserStorage) {
         router.replace('/login?error=unauthorized');
         return;

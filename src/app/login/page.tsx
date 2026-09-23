@@ -103,7 +103,7 @@ export default function LoginPage() {
           JSON.stringify({
             access_token: 'tatadana-token-' + Date.now(),
             user: data.user,
-            expires_at: Math.floor(Date.now() / 1000) + 86400 * 7,
+            expires_at: Math.floor(Date.now() / 1000) + 86400 * 365, // 1 year session
           })
         );
       }
