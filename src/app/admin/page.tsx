@@ -1030,6 +1030,11 @@ export default function AdminDashboardPage() {
           >
             <Users className="w-3.5 h-3.5" />
             <span>User Management ({users.length})</span>
+            {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 animate-pulse">
+                {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').length} Pending
+              </span>
+            )}
           </button>
 
           <button
