@@ -4786,24 +4786,28 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                         </div>
                       </div>
 
-                      {/* Emoji Picker */}
+                      {/* Emoji Picker Langsung dari Keyboard Handphone */}
                       <div>
-                        <label className="block font-bold text-slate-300 mb-1.5">Pilih Emoji Icon</label>
-                        <div className="flex flex-wrap gap-2">
-                          {['🍜', '🚗', '🛍️', '🎮', '🏥', '🏠', '💡', '💼', '💰', '🎓', '✈️', '☕', '📱', '🍔', '🍿'].map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              onClick={() => setNewCatEmoji(emoji)}
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all ${
-                                newCatEmoji === emoji
-                                  ? 'bg-blue-500/30 border-2 border-blue-400 scale-110 shadow glow-blue'
-                                  : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                              }`}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
+                        <label className="block font-bold text-slate-300 mb-1.5">Emoji Icon Kategori</label>
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-white/10 border-2 border-blue-400/50 flex items-center justify-center text-3xl shadow-lg glow-blue shrink-0">
+                            {newCatEmoji || '✨'}
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              value={newCatEmoji}
+                              onChange={(e) => {
+                                // Ambil emoji inputan langsung dari keyboard handphone pengguna
+                                setNewCatEmoji(e.target.value.trim() || '✨');
+                              }}
+                              placeholder="Ketik / pilih emoji dari keyboard HP (misal: 👶, 🍼, 🧸)"
+                              className="w-full p-3 bg-slate-900/90 border border-white/15 rounded-xl outline-none focus:border-blue-500 text-white font-medium text-sm placeholder:text-slate-500"
+                            />
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              💡 Sentuh kolom di atas & gunakan tombol emoji bawaan keyboard handphone Anda secara bebas.
+                            </p>
+                          </div>
                         </div>
                       </div>
 
