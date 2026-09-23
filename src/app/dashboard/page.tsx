@@ -503,6 +503,11 @@ export default function DashboardPage() {
   const [transferTo, setTransferTo] = useState(wallets[1]?.id || '');
   const [transferAmount, setTransferAmount] = useState('');
 
+  // Edit / Set Balance Modal States
+  const [showEditBalanceModal, setShowEditBalanceModal] = useState(false);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
+  const [manualBalanceInput, setManualBalanceInput] = useState('');
+
   // Period & Date Filter State
   const [periodFilter, setPeriodFilter] = useState<'all' | '1d' | '7d' | '30d' | 'custom'>('30d');
   const [customStartDate, setCustomStartDate] = useState('2026-09-01');
@@ -517,6 +522,7 @@ export default function DashboardPage() {
   // Receipt OCR State
   const [showInteractiveReceiptCard, setShowInteractiveReceiptCard] = useState(false);
   const [showTataAIModal, setShowTataAIModal] = useState(false);
+  const [botSelectedWalletId, setBotSelectedWalletId] = useState<string>('');
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
   const [receiptMerchant, setReceiptMerchant] = useState('Indomaret Point — Sudirman');
   const [receiptDate, setReceiptDate] = useState('2026-09-18');
@@ -851,13 +857,11 @@ export default function DashboardPage() {
       const walletTxs = userTransactions.filter(
         (t) =>
           t.wallet_id === w.id ||
-          t.wallet_name === w.name ||
-          (!t.wallet_id && w.is_default) ||
-          (w.is_default && (!t.wallet_id || t.wallet_id === 'w-1' || t.wallet_id.startsWith('w_cash_')))
+          (t.wallet_name && t.wallet_name.toLowerCase() === w.name.toLowerCase())
       );
       const incomeSum = walletTxs.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
       const expenseSum = walletTxs.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-      const baseBal = w.initial_balance !== undefined ? w.initial_balance : 0;
+      const baseBal = w.initial_balance !== undefined ? w.initial_balance : (w.balance || 0);
       return {
         ...w,
         balance: baseBal + incomeSum - expenseSum,
@@ -952,6 +956,42 @@ export default function DashboardPage() {
     );
   };
 
+  const handleSaveManualBalance = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWallet) return;
+    const newBal = parseFloat(manualBalanceInput.replace(/[^\d]/g, '')) || 0;
+
+    // Calculate current net transactions for this wallet
+    const walletTxs = userTransactions.filter(
+      (t) =>
+        t.wallet_id === editingWallet.id ||
+        (t.wallet_name && t.wallet_name.toLowerCase() === editingWallet.name.toLowerCase())
+    );
+    const incomeSum = walletTxs.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+    const expenseSum = walletTxs.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    const netTransactions = incomeSum - expenseSum;
+
+    // Set initial_balance so that displayed balance = newBal
+    const targetInitial = newBal - netTransactions;
+
+    setWallets((prev) =>
+      prev.map((w) => {
+        if (w.id === editingWallet.id) {
+          return {
+            ...w,
+            initial_balance: targetInitial,
+            balance: newBal,
+          };
+        }
+        return w;
+      })
+    );
+
+    setShowEditBalanceModal(false);
+    setEditingWallet(null);
+    setManualBalanceInput('');
+  };
+
   const handleTransferWallet = (e: React.FormEvent) => {
     e.preventDefault();
     if (transferFrom === transferTo) {
@@ -965,21 +1005,23 @@ export default function DashboardPage() {
       return;
     }
 
-    const sourceW = wallets.find((w) => w.id === transferFrom);
+    const sourceW = displayedWallets.find((w) => w.id === transferFrom);
     if (sourceW && sourceW.balance < amountNum) {
       alert(`Saldo ${sourceW.name} tidak mencukupi (Saldo: Rp${sourceW.balance.toLocaleString('id-ID')}).`);
       return;
     }
 
-    const destW = wallets.find((w) => w.id === transferTo);
+    const destW = displayedWallets.find((w) => w.id === transferTo);
 
-    setWallets(
-      wallets.map((w) => {
+    setWallets((prev) =>
+      prev.map((w) => {
         if (w.id === transferFrom) {
-          return { ...w, balance: w.balance - amountNum };
+          const base = w.initial_balance !== undefined ? w.initial_balance : (w.balance || 0);
+          return { ...w, initial_balance: base - amountNum, balance: (w.balance || 0) - amountNum };
         }
         if (w.id === transferTo) {
-          return { ...w, balance: w.balance + amountNum };
+          const base = w.initial_balance !== undefined ? w.initial_balance : (w.balance || 0);
+          return { ...w, initial_balance: base + amountNum, balance: (w.balance || 0) + amountNum };
         }
         return w;
       })
@@ -1025,8 +1067,8 @@ export default function DashboardPage() {
     source?: 'web' | 'telegram_text' | 'telegram_photo' | 'telegram_voice';
     items?: Array<{ name: string; price: number; quantity?: number; category?: string }>;
   }) => {
-    const targetWalletId = txData.wallet_id || wallets.find((w) => w.is_default)?.id || wallets[0]?.id;
-    const targetWallet = wallets.find((w) => w.id === targetWalletId) || wallets[0];
+    const targetWalletId = txData.wallet_id || displayedWallets.find((w) => w.is_default)?.id || displayedWallets[0]?.id;
+    const targetWallet = displayedWallets.find((w) => w.id === targetWalletId) || displayedWallets[0];
     const now = new Date();
     const timeStr = new Intl.DateTimeFormat('id-ID', {
       timeZone: 'Asia/Jakarta',
@@ -1629,7 +1671,7 @@ ${itemListText}
     },
     selectedWalletId: string
   ) => {
-    const selectedWallet = wallets.find((w) => w.id === selectedWalletId) || wallets[0];
+    const selectedWallet = displayedWallets.find((w) => w.id === selectedWalletId) || displayedWallets[0];
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
     const dayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
@@ -2012,15 +2054,18 @@ Setiap transaksi yang kamu chat di sini otomatis memotong budget kategori terseb
     const parsed = parseTransactionFromText(textToSend);
     if (parsed && parsed.amount > 0) {
       const isExp = parsed.type === 'expense';
-      let chosenWallet = wallets.find((w) => w.is_default) || wallets[0];
+      let chosenWallet = botSelectedWalletId
+        ? displayedWallets.find((w) => w.id === botSelectedWalletId) || displayedWallets[0]
+        : (displayedWallets.find((w) => w.is_default) || displayedWallets[0]);
+
       if (lower.includes('bca')) {
-        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('bca')) || chosenWallet;
+        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('bca')) || chosenWallet;
       } else if (lower.includes('mandiri')) {
-        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('mandiri')) || chosenWallet;
+        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('mandiri')) || chosenWallet;
       } else if (lower.includes('gopay') || lower.includes('go-pay')) {
-        chosenWallet = wallets.find((w) => w.name.toLowerCase().includes('gopay')) || chosenWallet;
+        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('gopay')) || chosenWallet;
       } else if (lower.includes('cash') || lower.includes('tunai') || lower.includes('dompet')) {
-        chosenWallet = wallets.find((w) => w.id === 'w_cash' || w.name.toLowerCase().includes('cash') || w.name.toLowerCase().includes('tunai')) || chosenWallet;
+        chosenWallet = displayedWallets.find((w) => w.id === 'w_cash' || w.name.toLowerCase().includes('cash') || w.name.toLowerCase().includes('tunai')) || chosenWallet;
       }
 
       // Record immediately into state, localStorage, and database!
@@ -2707,12 +2752,26 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
                         )}
                       </div>
 
-                      <div className="pt-3">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saldo Dompet</span>
-                        <p className="text-2xl font-black text-white tracking-tight mt-0.5">Rp{w.balance.toLocaleString('id-ID')}</p>
-                        {w.account_number && (
-                          <p className="text-xs text-slate-500 font-mono mt-1">{w.account_number}</p>
-                        )}
+                      <div className="pt-3 flex items-end justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saldo Dompet</span>
+                          <p className="text-2xl font-black text-white tracking-tight mt-0.5">Rp{w.balance.toLocaleString('id-ID')}</p>
+                          {w.account_number && (
+                            <p className="text-xs text-slate-500 font-mono mt-1">{w.account_number}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingWallet(w);
+                            setManualBalanceInput(String(Math.max(0, w.balance)));
+                            setShowEditBalanceModal(true);
+                          }}
+                          className="px-2.5 py-1 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[11px] font-bold transition-all flex items-center space-x-1"
+                          title="Setting / Ubah saldo awal dompet ini"
+                        >
+                          <span>✏️ Atur Saldo</span>
+                        </button>
                       </div>
                     </div>
 
@@ -4698,6 +4757,69 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
       )}
 
       {/* MODAL TRANSFER SALDO ANTAR WALLET */}
+      {/* Modal: Edit / Setting Saldo Dompet */}
+      {showEditBalanceModal && editingWallet && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="liquid-glass rounded-3xl p-6 max-w-sm w-full border border-white/20 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-extrabold text-white text-base">Setting Saldo {editingWallet.name}</h3>
+                <p className="text-xs text-slate-400">Atur saldo awal atau sesuaikan saldo dompet secara manual</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditBalanceModal(false);
+                  setEditingWallet(null);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveManualBalance} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Nominal Saldo Saat Ini (Rp)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400 font-bold">Rp</span>
+                  <input
+                    type="number"
+                    required
+                    value={manualBalanceInput}
+                    onChange={(e) => setManualBalanceInput(e.target.value)}
+                    placeholder="Contoh: 500000"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-bold text-sm"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  Saldo yang Anda masukkan akan langsung menjadi saldo aktif dompet ini.
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditBalanceModal(false);
+                    setEditingWallet(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl apple-blue-gradient text-white font-bold glow-blue hover:brightness-110"
+                >
+                  Simpan Saldo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showTransferModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="liquid-glass rounded-3xl p-6 max-w-md w-full border border-white/20 shadow-2xl space-y-4">
@@ -4717,7 +4839,7 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
                   onChange={(e) => setTransferFrom(e.target.value)}
                   className="w-full p-2.5 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-semibold"
                 >
-                  {wallets.map((w) => (
+                  {displayedWallets.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.icon} {w.name} (Saldo: Rp{w.balance.toLocaleString('id-ID')})
                     </option>
@@ -4732,7 +4854,7 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
                   onChange={(e) => setTransferTo(e.target.value)}
                   className="w-full p-2.5 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-semibold"
                 >
-                  {wallets.map((w) => (
+                  {displayedWallets.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.icon} {w.name} (Saldo: Rp{w.balance.toLocaleString('id-ID')})
                     </option>
@@ -4891,6 +5013,26 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
               </div>
 
               <div className="flex items-center space-x-2">
+                {/* Selector Dompet Tujuan AI Bot */}
+                <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-white/10 px-2.5 py-1 rounded-xl">
+                  <span className="text-[11px] text-slate-400 font-semibold hidden md:inline">Dompet:</span>
+                  <select
+                    value={botSelectedWalletId}
+                    onChange={(e) => setBotSelectedWalletId(e.target.value)}
+                    className="bg-transparent text-white font-bold text-xs outline-none cursor-pointer max-w-[120px] sm:max-w-[150px] truncate"
+                    title="Pilih dompet pencatatan untuk transaksi dari chat ini"
+                  >
+                    <option value="" className="bg-slate-900 text-slate-300">
+                      ★ Otomatis (Default / Deteksi Nama)
+                    </option>
+                    {displayedWallets.map((w) => (
+                      <option key={w.id} value={w.id} className="bg-slate-900 text-white">
+                        {w.icon} {w.name} (Rp{w.balance.toLocaleString('id-ID')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleScanSampleReceipt}
@@ -4949,7 +5091,7 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
                               <span>Pilih dompet untuk transaksi ini:</span>
                             </p>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {wallets.map((w) => (
+                              {displayedWallets.map((w) => (
                                 <button
                                   key={w.id}
                                   type="button"
