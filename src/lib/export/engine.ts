@@ -247,46 +247,53 @@ export function generatePdfBuffer(
   const netCashflow = totalIncome - totalExpense;
 
   let streamContent = '';
-  // Top Title Banner
+  // Top Title Banner (Use ASCII hyphen instead of UTF-8 em-dash to avoid font encoding mojibake)
   streamContent += 'BT\n';
-  streamContent += '/F2 20 Tf\n';
+  streamContent += '/F2 18 Tf\n';
   streamContent += '50 780 Td\n';
-  streamContent += `(${escapePdf('SIMPANUANG (TATADANA) — LAPORAN KEUANGAN PREMIUM')}) Tj\n`;
+  streamContent += `(${escapePdf('SIMPANUANG (TATADANA) - LAPORAN KEUANGAN')}) Tj\n`;
   streamContent += 'ET\n';
 
-  // Subtitle / Period
+  // Subtitle / Period (Clean WIB timestamp)
+  const nowWIB = new Date();
+  const wibTimeStr = new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+    timeZone: 'Asia/Jakarta',
+  }).format(nowWIB);
+
   streamContent += 'BT\n';
-  streamContent += '/F1 10 Tf\n';
+  streamContent += '/F1 9 Tf\n';
   streamContent += '50 760 Td\n';
-  streamContent += `(${escapePdf(`Periode: ${startDate} s/d ${endDate} | Dicetak pada WIB: ${new Date().toISOString()}`)}) Tj\n`;
+  streamContent += `(${escapePdf(`Periode: ${startDate} s/d ${endDate} | Dicetak: ${wibTimeStr} WIB`)}) Tj\n`;
   streamContent += 'ET\n';
 
   // Summary box
   streamContent += 'BT\n';
-  streamContent += '/F2 11 Tf\n';
+  streamContent += '/F2 10 Tf\n';
   streamContent += '50 730 Td\n';
   streamContent += `(${escapePdf(`Total Pemasukan: Rp ${totalIncome.toLocaleString('id-ID')}`)}) Tj\n`;
-  streamContent += '0 -15 Td\n';
+  streamContent += '0 -14 Td\n';
   streamContent += `(${escapePdf(`Total Pengeluaran: Rp ${totalExpense.toLocaleString('id-ID')}`)}) Tj\n`;
-  streamContent += '0 -15 Td\n';
+  streamContent += '0 -14 Td\n';
   streamContent += `(${escapePdf(`Net Cashflow: Rp ${netCashflow.toLocaleString('id-ID')} (${netCashflow >= 0 ? 'Surplus' : 'Defisit'})`)}) Tj\n`;
   streamContent += 'ET\n';
 
-  // Table header
+  // Table header with adjusted wide column layout
   streamContent += 'BT\n';
-  streamContent += '/F2 10 Tf\n';
+  streamContent += '/F2 9 Tf\n';
   streamContent += '50 670 Td\n';
-  streamContent += `(${escapePdf('TGL')}    ${escapePdf('JENIS')}        ${escapePdf('NOMINAL')}          ${escapePdf('KATEGORI')}            ${escapePdf('DOMPET')}        ${escapePdf('CATATAN')}) Tj\n`;
+  streamContent += `(${escapePdf('TGL')}        ${escapePdf('JENIS')}      ${escapePdf('NOMINAL')}          ${escapePdf('KATEGORI')}              ${escapePdf('DOMPET')}          ${escapePdf('CATATAN')}) Tj\n`;
   streamContent += 'ET\n';
 
   // Divider line
   streamContent += '0.5 w\n';
-  streamContent += '50 665 m 545 665 l S\n';
+  streamContent += '50 663 m 545 663 l S\n';
 
   // Table rows (up to 25 rows per page)
-  let y = 650;
+  let y = 648;
   streamContent += 'BT\n';
-  streamContent += '/F1 9 Tf\n';
+  streamContent += '/F1 8.5 Tf\n';
   streamContent += `50 ${y} Td\n`;
 
   const rows = transactions.slice(0, 25);
@@ -294,7 +301,10 @@ export function generatePdfBuffer(
     const tx = rows[i];
     const typeTag = tx.type === 'income' ? '[+IN]' : '[-OUT]';
     const amountStr = `Rp ${tx.amount.toLocaleString('id-ID')}`.padEnd(14, ' ');
-    const line = `${tx.date}  ${typeTag.padEnd(8, ' ')} ${amountStr} ${(tx.category_name || '-').slice(0, 16).padEnd(18, ' ')} ${(tx.wallet_name || '-').slice(0, 10).padEnd(12, ' ')} ${(tx.notes || '').slice(0, 22)}`;
+    const catStr = (tx.category_name || '-').slice(0, 22).padEnd(23, ' ');
+    const walletStr = (tx.wallet_name || '-').slice(0, 16).padEnd(17, ' ');
+    const notesStr = (tx.notes || '').slice(0, 25);
+    const line = `${tx.date}  ${typeTag.padEnd(7, ' ')} ${amountStr} ${catStr} ${walletStr} ${notesStr}`;
     
     if (i === 0) {
       streamContent += `(${escapePdf(line)}) Tj\n`;
