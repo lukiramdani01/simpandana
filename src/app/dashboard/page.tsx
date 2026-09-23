@@ -636,6 +636,25 @@ export default function DashboardPage() {
     return false;
   });
 
+  // Interactive Spotlight Tour State (Tutorial Pengguna Baru)
+  const [showTour, setShowTour] = useState(false);
+  const [tourStep, setTourStep] = useState(1);
+
+  // Auto-trigger tour on first login for new users
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && profile?.id) {
+      const completed = localStorage.getItem(`tatadana_tour_completed_${profile.id}`);
+      if (!completed) {
+        // Small delay to ensure UI elements are rendered
+        const timer = setTimeout(() => {
+          setShowTour(true);
+          setTourStep(1);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [profile?.id]);
+
   // Receipt OCR State
   const [showInteractiveReceiptCard, setShowInteractiveReceiptCard] = useState(false);
   const [showTataAIModal, setShowTataAIModal] = useState(false);
@@ -2567,6 +2586,19 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowTour(true);
+                setTourStep(1);
+              }}
+              className="px-2.5 sm:px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center space-x-1"
+              title="Buka Tutorial Panduan Interaktif"
+            >
+              <span>❓</span>
+              <span className="hidden md:inline">Panduan</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setShowTataAIModal(true)}
@@ -4958,6 +4990,173 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
       )}
 
       {/* MODAL TRANSFER SALDO ANTAR WALLET */}
+      {/* MODAL INTERACTIVE SPOTLIGHT TOUR GUIDE (OPSI 1) */}
+      {showTour && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="liquid-glass rounded-3xl p-6 sm:p-8 max-w-lg w-full border-2 border-blue-500 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Tour */}
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-[#2997FF] border border-blue-500/30 text-[11px] font-extrabold uppercase">
+                    Panduan Cepat ({tourStep}/4)
+                  </span>
+                  <span className="text-xs text-slate-400">✨ Selamat Datang!</span>
+                </div>
+                <h3 className="font-black text-white text-xl sm:text-2xl mt-2">
+                  {tourStep === 1 && '1. Atur Saldo Awal Dompet'}
+                  {tourStep === 2 && '2. Catat Kilat via Tata AI Bot'}
+                  {tourStep === 3 && '3. Tentukan Target Budget Bulanan'}
+                  {tourStep === 4 && '4. Pantau Laporan & Download PDF'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTour(false);
+                  if (profile?.id) {
+                    localStorage.setItem(`tatadana_tour_completed_${profile.id}`, 'true');
+                  }
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold"
+                title="Tutup Panduan"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Step Content Preview Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-950/40 via-slate-900/60 to-transparent border border-blue-500/30 space-y-3">
+              {tourStep === 1 && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="text-2xl p-2 rounded-2xl bg-blue-500/20 text-blue-400">💳</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Menu Multi-Wallet</h4>
+                      <p className="text-[11px] text-slate-300">Setiap akun baru bermula dari saldo Rp0.</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Buka menu <strong>Multi-Wallet</strong> di sidebar, lalu klik tombol <strong>✏️ Atur Saldo</strong> pada kartu BCA, Mandiri, atau GoPay untuk memasukkan nominal uang yang Anda miliki saat ini.
+                  </p>
+                  <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 text-[11px] text-blue-300">
+                    💡 <em>Anda juga bisa transfer saldo antar-dompet tanpa terkena biaya admin.</em>
+                  </div>
+                </div>
+              )}
+
+              {tourStep === 2 && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="text-2xl p-2 rounded-2xl bg-emerald-500/20 text-emerald-400">🤖</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Tata AI Bot (Chat Cerdas)</h4>
+                      <p className="text-[11px] text-slate-300">Catat keuangan semudah mengirim chat santai.</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Klik tombol <strong>🤖 Tata AI Bot</strong> di kanan atas. Ketik transaksi seperti biasa, misalnya <em>&ldquo;makan siang 25rb&rdquo;</em>, <em>&ldquo;nabung 50rb&rdquo;</em>, atau <em>&ldquo;investasi saham 100rb&rdquo;</em>.
+                  </p>
+                  <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-[11px] text-emerald-300">
+                    💡 <em>Bot akan otomatis menampilkan tombol pilihan dompet langsung di dalam bubble chat!</em>
+                  </div>
+                </div>
+              )}
+
+              {tourStep === 3 && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="text-2xl p-2 rounded-2xl bg-amber-500/20 text-amber-400">🎯</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Kontrol Target Budget</h4>
+                      <p className="text-[11px] text-slate-300">Cegah boros dengan plafon bulanan aman.</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Buka menu <strong>Budget</strong> lalu klik <strong>+ Atur Target Budget</strong>. Anda bisa membatasi pengeluaran untuk Makanan, Transportasi, Tabungan, Investasi, atau Kategori Custom sendiri.
+                  </p>
+                  <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 text-[11px] text-amber-300">
+                    💡 <em>Sistem otomatis mengirim alarm jika pengeluaran Anda menyentuh 80% dan 100%.</em>
+                  </div>
+                </div>
+              )}
+
+              {tourStep === 4 && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="text-2xl p-2 rounded-2xl bg-purple-500/20 text-purple-400">📊</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Laporan & Ekspor Berkas</h4>
+                      <p className="text-[11px] text-slate-300">Pantau arus kas dan download dokumen rapi.</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Buka menu <strong>Laporan</strong> untuk memantau grafik tren finansial. Pengguna Pro Lifetime (Rp99.000) dapat mendownload berkas <strong>PDF resmi super rapi</strong> dan <strong>Excel (.xlsx)</strong> kapan saja tanpa batas.
+                  </p>
+                  <div className="p-2.5 bg-purple-500/10 rounded-xl border border-purple-500/20 text-[11px] text-purple-300">
+                    💡 <em>Semua transaksi Anda diisolasi aman dan tidak akan hilang atau bercampur dengan akun lain.</em>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stepper Dots & Action Buttons */}
+            <div className="flex items-center justify-between pt-1">
+              {/* Stepper Dots */}
+              <div className="flex items-center space-x-1.5">
+                {[1, 2, 3, 4].map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => setTourStep(step)}
+                    className={`h-2 rounded-full transition-all ${
+                      tourStep === step ? 'w-6 bg-blue-500' : 'w-2 bg-white/20 hover:bg-white/40'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center space-x-2">
+                {tourStep > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setTourStep((prev) => prev - 1)}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-xs font-bold"
+                  >
+                    Kembali
+                  </button>
+                )}
+
+                {tourStep < 4 ? (
+                  <button
+                    type="button"
+                    onClick={() => setTourStep((prev) => prev + 1)}
+                    className="px-4 py-2 rounded-xl apple-blue-gradient text-white text-xs font-extrabold shadow glow-blue hover:brightness-110 flex items-center space-x-1"
+                  >
+                    <span>Lanjut</span>
+                    <span>➔</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTour(false);
+                      if (profile?.id) {
+                        localStorage.setItem(`tatadana_tour_completed_${profile.id}`, 'true');
+                      }
+                    }}
+                    className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black shadow-lg shadow-emerald-950/40"
+                  >
+                    ✓ Mulai Menggunakan!
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL UPGRADE PRO LIFETIME (99K) */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
