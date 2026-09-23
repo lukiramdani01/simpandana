@@ -320,19 +320,20 @@ export function generatePdfBuffer(
 
   // 3. Table Header Bar (Dark Navy Fill)
   streamContent += '0.12 0.18 0.28 rg\n';
-  streamContent += '40 620 515 22 re f\n';
+  streamContent += '40 615 515 22 re f\n';
 
-  // Table Column Titles
-  streamContent += 'BT\n';
-  streamContent += '/F2 8.5 Tf\n';
+  // Table Column Titles with Exact Absolute Coordinates
   streamContent += '1 1 1 rg\n'; // White text
-  streamContent += '50 627 Td\n';
-  streamContent += `(${escapePdf('TANGGAL')}      ${escapePdf('JENIS')}      ${escapePdf('NOMINAL')}          ${escapePdf('KATEGORI')}              ${escapePdf('DOMPET')}          ${escapePdf('CATATAN')}) Tj\n`;
-  streamContent += 'ET\n';
+  streamContent += `BT /F2 8.5 Tf 48 622 Td (${escapePdf('TANGGAL')}) Tj ET\n`;
+  streamContent += `BT /F2 8.5 Tf 115 622 Td (${escapePdf('JENIS')}) Tj ET\n`;
+  streamContent += `BT /F2 8.5 Tf 165 622 Td (${escapePdf('NOMINAL')}) Tj ET\n`;
+  streamContent += `BT /F2 8.5 Tf 255 622 Td (${escapePdf('KATEGORI')}) Tj ET\n`;
+  streamContent += `BT /F2 8.5 Tf 375 622 Td (${escapePdf('DOMPET')}) Tj ET\n`;
+  streamContent += `BT /F2 8.5 Tf 465 622 Td (${escapePdf('CATATAN')}) Tj ET\n`;
 
-  // Table rows with alternating zebra striping
-  let y = 600;
-  const rows = transactions.slice(0, 30);
+  // Table rows with alternating zebra striping and strict column coordinates
+  let y = 595;
+  const rows = transactions.slice(0, 28);
 
   for (let i = 0; i < rows.length; i++) {
     const tx = rows[i];
@@ -340,30 +341,45 @@ export function generatePdfBuffer(
 
     // Row zebra background
     if (isEven) {
-      streamContent += '0.97 0.98 1.0 rg\n';
+      streamContent += '0.96 0.97 0.99 rg\n';
       streamContent += `40 ${y - 4} 515 18 re f\n`;
     }
 
     // Row Bottom Border Line
-    streamContent += '0.9 0.92 0.95 RG\n';
+    streamContent += '0.88 0.90 0.94 RG\n';
     streamContent += '0.4 w\n';
     streamContent += `40 ${y - 4} m 555 ${y - 4} l S\n`;
 
-    const typeTag = tx.type === 'income' ? '[+IN]' : '[-OUT]';
-    const amountStr = `Rp ${tx.amount.toLocaleString('id-ID')}`.padEnd(14, ' ');
-    const catStr = (tx.category_name || '-').slice(0, 22).padEnd(23, ' ');
-    const walletStr = (tx.wallet_name || '-').slice(0, 16).padEnd(17, ' ');
-    const notesStr = (tx.notes || '').slice(0, 26);
-    const line = `${tx.date}  ${typeTag.padEnd(7, ' ')} ${amountStr} ${catStr} ${walletStr} ${notesStr}`;
+    const isIncome = tx.type === 'income';
+    const typeLabel = isIncome ? '+ MASUK' : '- KELUAR';
+    const amountFormatted = `Rp ${tx.amount.toLocaleString('id-ID')}`;
+    const categoryClean = (tx.category_name || '-').slice(0, 20);
+    const walletClean = (tx.wallet_name || '-').slice(0, 18);
+    const notesClean = (tx.notes || '-').slice(0, 30);
 
-    streamContent += 'BT\n';
-    streamContent += '/F1 8 Tf\n';
-    streamContent += '0.15 0.18 0.25 rg\n'; // Clean readable charcoal text
-    streamContent += `50 ${y} Td\n`;
-    streamContent += `(${escapePdf(line)}) Tj\n`;
-    streamContent += 'ET\n';
+    // 1. Tanggal (Dark grey)
+    streamContent += `BT /F1 8 Tf 0.25 0.3 0.38 rg 48 ${y} Td (${escapePdf(tx.date || '-')}) Tj ET\n`;
 
-    y -= 18;
+    // 2. Jenis (+MASUK Green, -KELUAR Red)
+    if (isIncome) {
+      streamContent += `BT /F2 7.5 Tf 0.08 0.58 0.32 rg 115 ${y} Td (${escapePdf(typeLabel)}) Tj ET\n`;
+    } else {
+      streamContent += `BT /F2 7.5 Tf 0.82 0.16 0.16 rg 115 ${y} Td (${escapePdf(typeLabel)}) Tj ET\n`;
+    }
+
+    // 3. Nominal (Bold dark text)
+    streamContent += `BT /F2 8 Tf 0.12 0.15 0.22 rg 165 ${y} Td (${escapePdf(amountFormatted)}) Tj ET\n`;
+
+    // 4. Kategori
+    streamContent += `BT /F1 8 Tf 0.18 0.22 0.3 rg 255 ${y} Td (${escapePdf(categoryClean)}) Tj ET\n`;
+
+    // 5. Dompet
+    streamContent += `BT /F1 8 Tf 0.2 0.25 0.35 rg 375 ${y} Td (${escapePdf(walletClean)}) Tj ET\n`;
+
+    // 6. Catatan (Muted text)
+    streamContent += `BT /F1 8 Tf 0.4 0.45 0.52 rg 465 ${y} Td (${escapePdf(notesClean)}) Tj ET\n`;
+
+    y -= 19;
   }
 
   // Footer Box
