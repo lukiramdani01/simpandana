@@ -166,6 +166,25 @@ function getWIBDateDaysAgo(days: number): string {
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'beranda' | 'transaksi' | 'laporan' | 'budget' | 'wallet' | 'settings' | 'admin' | 'bot_sim'>('beranda');
+
+  // Sync initial tab from URL query param (?tab=wallets or ?tab=wallet)
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'wallets' || tabParam === 'wallet') {
+        setActiveTab('wallet');
+      } else if (tabParam === 'transaksi') {
+        setActiveTab('transaksi');
+      } else if (tabParam === 'laporan') {
+        setActiveTab('laporan');
+      } else if (tabParam === 'budget') {
+        setActiveTab('budget');
+      } else if (tabParam === 'settings') {
+        setActiveTab('settings');
+      }
+    }
+  }, []);
   
   // Client-side authentication guard: enforce login check
   React.useEffect(() => {
