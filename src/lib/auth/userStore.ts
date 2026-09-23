@@ -19,11 +19,15 @@ export interface RegisteredUser {
   created_at: string;
 }
 
+declare global {
+  var __tatadanaUsersCache__: Map<string, RegisteredUser> | undefined;
+}
+
 const USERS_FILE_PATH = path.join('/tmp', 'tatadana_registered_users.json');
 export const SUPERADMIN_EMAIL = 'lramdanie02@gmail.com';
 
-// Memory cache
-let usersCache: Map<string, RegisteredUser> | null = null;
+// Global memory cache surviving serverless function reuse
+let usersCache: Map<string, RegisteredUser> | null = globalThis.__tatadanaUsersCache__ || null;
 
 function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
@@ -112,11 +116,13 @@ function loadUsers(): Map<string, RegisteredUser> {
   }
 
   usersCache = map;
+  globalThis.__tatadanaUsersCache__ = map;
   return map;
 }
 
 function saveUsers(): void {
   if (!usersCache) return;
+  globalThis.__tatadanaUsersCache__ = usersCache;
   try {
     const list = Array.from(usersCache.values());
     fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');

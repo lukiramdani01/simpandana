@@ -112,6 +112,26 @@ export default function RegisterPage() {
         }
       }
 
+      try {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'register',
+            user: {
+              id: data.user.id,
+              full_name: data.user.full_name,
+              email: data.user.email,
+              created_at: data.user.created_at,
+              approval_status: 'pending_approval',
+            },
+          }),
+        });
+        await res.json();
+      } catch (adminSyncErr) {
+        console.warn('Sync to admin pending table:', adminSyncErr);
+      }
+
       setRegisteredData({
         fullName: fullName.trim(),
         email: email.trim(),

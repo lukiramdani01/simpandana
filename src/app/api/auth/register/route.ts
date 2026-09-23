@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser } from '@/lib/auth/userStore';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { pendingUsersMemoryStore } from '@/lib/telegram/linking';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,18 @@ export async function POST(req: NextRequest) {
 
     // Send email log / fallback preview
     console.log(`[Email Mailer Log] OTP sent to ${email}: ${result.otp}`);
+
+    // Register into memory store for pending approval view in Super Admin
+    pendingUsersMemoryStore.unshift({
+      id: result.user.id,
+      full_name: result.user.full_name,
+      telegram_username: null,
+      telegram_user_id: 0,
+      telegram_chat_id: 0,
+      approval_status: 'pending_approval',
+      is_active: false,
+      registered_at: result.user.created_at,
+    });
 
     // Attempt to also sync with Supabase profiles table if available
     try {
