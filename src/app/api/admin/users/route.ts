@@ -9,6 +9,7 @@ import {
   toggleUserActiveState,
   pendingUsersMemoryStore,
 } from '@/lib/telegram/linking';
+import { getAllRegisteredUsers, updateUserApproval } from '@/lib/auth/userStore';
 
 export async function GET() {
   try {
@@ -23,14 +24,41 @@ export async function GET() {
       // Memory fallback
     }
 
+    // Merge registered email users from userStore
+    const registeredWebUsers = getAllRegisteredUsers();
+
     // Merge memory store pending users
     const mergedMap = new Map();
     dbUsers.forEach((u) => mergedMap.set(u.id, u));
+
+    // Add registered web users (such as djmtire21@gmail.com, etc)
+    registeredWebUsers.forEach((u) => {
+      if (!mergedMap.has(u.id)) {
+        mergedMap.set(u.id, {
+          id: u.id,
+          full_name: u.full_name,
+          email: u.email,
+          phone: u.phone || '-',
+          plan: u.plan || 'starter',
+          approval_status: u.approval_status || 'pending_approval',
+          is_active: u.is_active ?? true,
+          telegram_user_id: (u as any).telegram_user_id || null,
+          telegram_chat_id: (u as any).telegram_chat_id || null,
+          telegram_username: (u as any).telegram_username || null,
+          created_at: u.created_at,
+        });
+      } else {
+        const existing = mergedMap.get(u.id);
+        mergedMap.set(u.id, { ...existing, email: u.email, approval_status: u.approval_status || existing.approval_status });
+      }
+    });
+
     pendingUsersMemoryStore.forEach((u) => {
       if (!mergedMap.has(u.id)) {
         mergedMap.set(u.id, {
           id: u.id,
           full_name: u.full_name,
+          email: (u as any).email || '-',
           phone: '-',
           plan: 'pro',
           approval_status: u.approval_status,
@@ -105,24 +133,28 @@ export async function POST(request: Request) {
 
     if (action === 'approve') {
       await approveUserProfile(userId);
+      updateUserApproval(userId, 'approved', true);
       return NextResponse.json({
         ok: true,
-        message: `Pengguna ${userId} berhasil disetujui! Pesan Selamat Datang otomatis telah dikirimkan ke Telegram pengguna.`,
+        message: `Pengguna ${userId} berhasil disetujui!`,
       });
     } else if (action === 'reject') {
       await rejectUserProfile(userId);
+      updateUserApproval(userId, 'rejected', false);
       return NextResponse.json({
         ok: true,
         message: `Pengguna ${userId} telah ditolak.`,
       });
     } else if (action === 'suspend') {
       await suspendUserProfile(userId);
+      updateUserApproval(userId, 'suspended', false);
       return NextResponse.json({
         ok: true,
         message: `Pengguna ${userId} telah dibekukan (SUSPENDED).`,
       });
     } else if (action === 'activate') {
       await toggleUserActiveState(userId, true);
+      updateUserApproval(userId, 'approved', true);
       return NextResponse.json({
         ok: true,
         message: `Akses pengguna ${userId} berhasil diaktifkan.`,
@@ -130,6 +162,7 @@ export async function POST(request: Request) {
     } else if (action === 'toggle_active') {
       const nextState = typeof isActive === 'boolean' ? isActive : true;
       await toggleUserActiveState(userId, nextState);
+      updateUserApproval(userId, nextState ? 'approved' : 'suspended', nextState);
       return NextResponse.json({
         ok: true,
         message: `Akses pengguna ${userId} berhasil diubah menjadi ${nextState ? 'AKTIF' : 'NONAKTIF'}.`,

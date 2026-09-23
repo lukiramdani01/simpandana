@@ -122,13 +122,13 @@ export default function AdminDashboardPage() {
   };
 
   // Navigation tab within Admin
-  const [activeSection, setActiveSection] = useState<'switchboard' | 'users' | 'payments' | 'audit' | 'simulator' | 'omnichannel'>('switchboard');
+  const [activeSection, setActiveSection] = useState<'switchboard' | 'users' | 'payments' | 'audit' | 'simulator'>('users');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const sec = params.get('section');
-      if (sec && ['switchboard', 'users', 'payments', 'audit', 'simulator', 'omnichannel'].includes(sec)) {
+      if (sec && ['switchboard', 'users', 'payments', 'audit', 'simulator'].includes(sec)) {
         setActiveSection(sec as any);
       }
     }
@@ -206,9 +206,7 @@ export default function AdminDashboardPage() {
 
   React.useEffect(() => {
     fetchTraces();
-    if (activeSection === 'omnichannel') {
-      fetchOmniData();
-    }
+    
   }, [activeSection]);
 
   const traceStats = React.useMemo(() => {
@@ -1026,17 +1024,7 @@ export default function AdminDashboardPage() {
             <span>Telegram Webhook Simulator</span>
           </button>
 
-          <button
-            onClick={() => setActiveSection('omnichannel')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeSection === 'omnichannel'
-                ? 'apple-blue-gradient text-white shadow glow-blue'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>Omnichannel Gateway</span>
-          </button>
+          
         </div>
       </div>
 
@@ -1402,8 +1390,8 @@ export default function AdminDashboardPage() {
                     <thead className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-white/10 font-bold">
                       <tr>
                         <th className="py-3 px-3">Nama Pengguna</th>
-                        <th className="py-3 px-3">Telegram Username</th>
-                        <th className="py-3 px-3">Telegram ID</th>
+                        <th className="py-3 px-3">Email Terdaftar</th>
+                        <th className="py-3 px-3">Telegram / ID</th>
                         <th className="py-3 px-3">Waktu Daftar</th>
                         <th className="py-3 px-3">Status</th>
                         <th className="py-3 px-3 text-right">Aksi Persetujuan Admin</th>
@@ -1413,8 +1401,10 @@ export default function AdminDashboardPage() {
                       {users.filter((u) => u.approval_status?.toLowerCase() === 'pending_approval' || u.approval_status?.toLowerCase() === 'pending').map((u) => (
                         <tr key={u.id} className="hover:bg-white/5">
                           <td className="py-3 px-3 font-bold text-white">{u.full_name}</td>
-                          <td className="py-3 px-3 text-cyan-400 font-mono">@{u.telegram_username || 'tidak_ada'}</td>
-                          <td className="py-3 px-3 text-slate-300 font-mono">{u.telegram_user_id || u.id}</td>
+                          <td className="py-3 px-3 text-amber-300 font-mono">{(u as any).email || '-'}</td>
+                          <td className="py-3 px-3 text-cyan-400 font-mono">
+                            {u.telegram_username ? `@${u.telegram_username}` : (u.telegram_user_id || u.id)}
+                          </td>
                           <td className="py-3 px-3 text-slate-400 text-[11px] font-mono">{u.created_at}</td>
                           <td className="py-3 px-3">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -2234,274 +2224,6 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* SECTION 6: OMNICHANNEL GATEWAY & MULTI-CHANNEL SWITCHBOARD */}
-        {activeSection === 'omnichannel' && (
-          <div className="space-y-6">
-            {/* Header info */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#0b172a] via-[#0d233a] to-[#071324] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl backdrop-blur-xl">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-cyan-500/20 border border-cyan-500/40 rounded-2xl text-cyan-300">
-                    <Radio className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-                      Omnichannel Routing Engine & Gateway
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
-                        ALL CHANNELS ACTIVE
-                      </span>
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      Satu integrasi universal untuk menerima pesan transaksi finansial dari WhatsApp, Telegram Bot, Web Chat, dan REST Webhook.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchOmniData}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-bold border border-white/10 flex items-center space-x-2 transition-all"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Refresh Channel Status</span>
-                </button>
-              </div>
-
-              {/* 4 Channel Status Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                {[
-                  {
-                    id: 'whatsapp',
-                    name: 'WhatsApp Official & WABA',
-                    icon: '💬',
-                    status: 'ACTIVE',
-                    webhook: '/api/omnichannel/webhook?channel=whatsapp',
-                    color: 'emerald',
-                  },
-                  {
-                    id: 'telegram',
-                    name: 'Telegram Bot Engine',
-                    icon: '✈️',
-                    status: 'ACTIVE',
-                    webhook: '/api/telegram/webhook',
-                    color: 'blue',
-                  },
-                  {
-                    id: 'webchat',
-                    name: 'Web Chat & In-App Widget',
-                    icon: '🌐',
-                    status: 'ACTIVE',
-                    webhook: '/api/omnichannel/simulate',
-                    color: 'indigo',
-                  },
-                  {
-                    id: 'webhook',
-                    name: 'Universal REST Webhook',
-                    icon: '⚡',
-                    status: 'ACTIVE',
-                    webhook: '/api/omnichannel/webhook',
-                    color: 'amber',
-                  },
-                ].map((ch) => (
-                  <div
-                    key={ch.id}
-                    className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/40 transition-all space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl">{ch.icon}</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        {ch.status}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-extrabold text-sm text-white">{ch.name}</h4>
-                      <code className="text-[10px] text-cyan-400 font-mono block truncate pt-1">{ch.webhook}</code>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Omnichannel Message Simulator */}
-            <div className="liquid-glass rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="border-b border-white/10 pb-4">
-                <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-cyan-400" />
-                  <span>Simulator Inbound Omnichannel Interaktif</span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Uji coba pengiriman pesan transaksi multi-channel secara live untuk memverifikasi pencatatan saldo dan sinkronisasi real-time.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Pilih Saluran (Channel)</label>
-                  <select
-                    value={omniSimChannel}
-                    onChange={(e) => setOmniSimChannel(e.target.value as any)}
-                    className="w-full p-3 bg-slate-900 border border-white/10 rounded-xl outline-none text-xs text-white"
-                  >
-                    <option value="whatsapp">💬 WhatsApp (Meta WABA / Gateway)</option>
-                    <option value="telegram">✈️ Telegram Bot</option>
-                    <option value="webchat">🌐 Web Chat Widget</option>
-                    <option value="webhook">⚡ Universal Webhook API</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">ID Pengirim / Nomor HP</label>
-                  <input
-                    type="text"
-                    value={omniSimSender}
-                    onChange={(e) => setOmniSimSender(e.target.value)}
-                    placeholder="+6281234567890"
-                    className="w-full p-3 bg-slate-900 border border-white/10 rounded-xl outline-none text-xs text-white font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Pesan Finansial Natural Language</label>
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={omniSimText}
-                      onChange={(e) => setOmniSimText(e.target.value)}
-                      placeholder="Contoh: Beli kopi 25rb pakai BCA"
-                      className="flex-1 p-3 bg-slate-900 border border-white/10 rounded-xl outline-none text-xs text-white"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendOmniSim()}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSendOmniSim}
-                      disabled={omniSimLoading || !omniSimText.trim()}
-                      className="px-5 py-3 apple-blue-gradient text-white rounded-xl text-xs font-bold shadow glow-blue flex items-center space-x-2 disabled:opacity-50"
-                    >
-                      {omniSimLoading ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Kirim</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preset buttons */}
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                <span className="text-slate-400 text-[11px] font-semibold">Coba Template Cepat:</span>
-                {[
-                  'Makan siang 35rb di warteg',
-                  'Isi bensin pertamax 50rb pakai Mandiri',
-                  'Gaji freelance 3.5jt',
-                  'Beli pulsa telkomsel 100k via GoPay',
-                ].map((txt) => (
-                  <button
-                    key={txt}
-                    type="button"
-                    onClick={() => setOmniSimText(txt)}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300 border border-cyan-500/20 text-[11px]"
-                  >
-                    "{txt}"
-                  </button>
-                ))}
-              </div>
-
-              {/* Simulation Result Box */}
-              {omniSimResult && (
-                <div className="p-4 rounded-2xl bg-black/50 border border-cyan-500/30 space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="flex items-center gap-2 text-cyan-400">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      Respon Saluran {omniSimResult.channel?.toUpperCase()} ({omniSimResult.latencyMs}ms)
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Trace ID: {omniSimResult.traceId}</span>
-                  </div>
-
-                  <pre className="p-3 rounded-xl bg-slate-950 font-mono text-xs text-emerald-300 whitespace-pre-wrap border border-white/5">
-                    {omniSimResult.replyText}
-                  </pre>
-
-                  {omniSimResult.transaction && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-white/5 p-3 rounded-xl">
-                      <span><strong>Tipe:</strong> {omniSimResult.transaction.type}</span>
-                      <span>•</span>
-                      <span><strong>Nominal:</strong> Rp {omniSimResult.transaction.amount?.toLocaleString('id-ID')}</span>
-                      <span>•</span>
-                      <span><strong>Dompet:</strong> {omniSimResult.transaction.wallet_name}</span>
-                      <span>•</span>
-                      <span><strong>Kategori:</strong> {omniSimResult.transaction.category_name}</span>
-                      <span>•</span>
-                      <span className="text-emerald-400 font-bold">✓ Sinkron ke Dashboard</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Omnichannel Traces Table */}
-            <div className="liquid-glass rounded-3xl p-6 sm:p-8 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <h3 className="font-extrabold text-white text-base">Riwayat Transaksi Omnichannel (Trace Logs)</h3>
-                <span className="text-xs text-slate-400 font-mono">Total {omniTraces.length} pesan diproses</span>
-              </div>
-
-              {omniTraces.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">
-                  Belum ada log pesan omnichannel. Silakan gunakan simulator di atas untuk menguji pesan masuk.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-white/10 text-slate-400">
-                        <th className="py-2.5 px-3">Saluran</th>
-                        <th className="py-2.5 px-3">Pengirim</th>
-                        <th className="py-2.5 px-3">Pesan Teks</th>
-                        <th className="py-2.5 px-3">Nominal Terdeteksi</th>
-                        <th className="py-2.5 px-3">Dompet</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3">Latensi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {omniTraces.map((tr) => (
-                        <tr key={tr.id || tr.traceId} className="hover:bg-white/5 text-slate-200">
-                          <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 uppercase">
-                              {tr.channel}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-400">{tr.senderId}</td>
-                          <td className="py-2.5 px-3 max-w-[200px] truncate">{tr.rawText}</td>
-                          <td className="py-2.5 px-3 font-bold text-white">
-                            {tr.parsedAmount ? `Rp ${tr.parsedAmount.toLocaleString('id-ID')}` : '-'}
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-300">{tr.parsedWallet || '-'}</td>
-                          <td className="py-2.5 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                tr.status === 'SUCCESS'
-                                  ? 'bg-emerald-500/20 text-emerald-400'
-                                  : 'bg-amber-500/20 text-amber-400'
-                              }`}
-                            >
-                              {tr.status}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-400">{tr.latencyMs}ms</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               )}
             </div>

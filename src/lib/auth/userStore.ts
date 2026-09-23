@@ -427,6 +427,46 @@ export function getUserByEmail(email: string): Omit<RegisteredUser, 'passwordHas
 }
 
 /**
+ * Update user approval status & active state
+ */
+export function updateUserApproval(emailOrId: string, status: 'approved' | 'rejected' | 'pending_approval' | 'suspended', isActive: boolean = true): boolean {
+  const users = loadUsers();
+  const emailClean = emailOrId.trim().toLowerCase();
+  let target = users.get(emailClean);
+  if (!target) {
+    for (const u of Array.from(users.values())) {
+      if (u.id === emailOrId) {
+        target = u;
+        break;
+      }
+    }
+  }
+  if (!target) return false;
+  target.approval_status = status;
+  target.is_active = isActive;
+  saveUsers();
+  return true;
+}
+
+/**
+ * Reset password without OTP
+ */
+export function resetPasswordDirect(email: string, newPassword: string): { success: boolean; error?: string } {
+  const users = loadUsers();
+  const emailClean = email.trim().toLowerCase();
+  const user = users.get(emailClean);
+  if (!user) {
+    return { success: false, error: 'Email belum terdaftar.' };
+  }
+  if (!newPassword || newPassword.length < 6) {
+    return { success: false, error: 'Password baru minimal 6 karakter.' };
+  }
+  user.passwordHash = hashPassword(newPassword, user.salt);
+  saveUsers();
+  return { success: true };
+}
+
+/**
  * Get all users for admin
  */
 export function getAllRegisteredUsers(): Omit<RegisteredUser, 'passwordHash' | 'salt' | 'email_otp'>[] {
