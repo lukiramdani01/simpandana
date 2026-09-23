@@ -60,7 +60,7 @@ function loadUsers(): Map<string, RegisteredUser> {
     id: 'usr-101',
     email: 'luki@tatadana.id',
     full_name: 'Luki Ramdani',
-    phone: '+6281234567890',
+    phone: '+628****7890',
     passwordHash: hashPassword('admin123', defaultSalt),
     salt: defaultSalt,
     role: 'user',
@@ -71,6 +71,24 @@ function loadUsers(): Map<string, RegisteredUser> {
     created_at: '2026-09-01T08:00:00+07:00',
   };
   map.set('luki@tatadana.id', defaultUser);
+
+  // 3. Registered test account: djmtire21@gmail.com
+  const djmSalt = '280ebd9597cdcfc3ab934e35440f2af7';
+  const djmUser: RegisteredUser = {
+    id: 'usr-1790097410738-28',
+    email: 'djmtire21@gmail.com',
+    full_name: 'Djm Tire',
+    phone: '-',
+    passwordHash: '77cf0b59b3661405efa1a152f389b69e0902ac1e935a67aa9443dcb8d765ad47d530cde61a94828300d6b0f034a87e4c6cc03025f3d108f2e17c6034dd3f8dea',
+    salt: djmSalt,
+    role: 'user',
+    plan: 'starter',
+    approval_status: 'pending_approval',
+    is_active: true,
+    email_verified: true,
+    created_at: '2026-09-22T17:00:00+07:00',
+  };
+  map.set('djmtire21@gmail.com', djmUser);
 
   try {
     if (fs.existsSync(USERS_FILE_PATH)) {
