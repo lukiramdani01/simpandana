@@ -479,17 +479,59 @@ export default function AdminDashboardPage() {
   ]);
 
   React.useEffect(() => {
+    // 1. Fetch from backend API
     fetch('/api/admin/users')
       .then((res) => res.json())
       .then((data) => {
-        if (data.ok && Array.isArray(data.users) && data.users.length > 0) {
-          const mappedUsers = data.users.map((u: any) => ({
+        let serverUsers: any[] = [];
+        if (data.ok && Array.isArray(data.users)) {
+          serverUsers = data.users;
+        }
+
+        // 2. Fallback read from localStorage registered accounts to guarantee zero loss on serverless
+        let localAccounts: any[] = [];
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem('tatadana_registered_accounts');
+            if (raw) {
+              const accObj = JSON.parse(raw);
+              localAccounts = Object.values(accObj).map((acc: any) => ({
+                id: acc.id || `usr-${acc.email}`,
+                full_name: acc.full_name || acc.name || 'User Terdaftar',
+                email: acc.email,
+                phone: acc.phone || '-',
+                plan: acc.plan || 'starter',
+                approval_status: acc.approval_status || 'pending_approval',
+                is_active: acc.is_active ?? true,
+                created_at: acc.created_at || new Date().toISOString().split('T')[0],
+              }));
+            }
+          } catch (e) {
+            console.warn('Error reading tatadana_registered_accounts', e);
+          }
+        }
+
+        // Merge users avoiding duplicates by email
+        const mergedMap = new Map<string, any>();
+        for (const u of serverUsers) {
+          if (u.email) mergedMap.set(u.email.toLowerCase(), u);
+          else mergedMap.set(u.id, u);
+        }
+        for (const lu of localAccounts) {
+          if (lu.email && !mergedMap.has(lu.email.toLowerCase())) {
+            mergedMap.set(lu.email.toLowerCase(), lu);
+          }
+        }
+
+        const allUsers = Array.from(mergedMap.values());
+        if (allUsers.length > 0) {
+          const mappedUsers = allUsers.map((u: any) => ({
             id: u.id,
             full_name: u.full_name || 'User Telegram',
             email: u.email || '-',
             phone: u.phone || '-',
             plan: u.plan || 'pro',
-            approval_status: u.approval_status || 'approved',
+            approval_status: u.approval_status || 'pending_approval',
             is_active: u.is_active ?? true,
             quota_used: u.quota_used || 0,
             quota_limit: u.plan === 'pro' ? Infinity : 50,
