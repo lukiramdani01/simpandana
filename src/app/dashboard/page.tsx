@@ -2322,7 +2322,7 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                 </span>
               ) : (
                 <span className="text-[9px] bg-amber-500/30 text-amber-200 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30">
-                  STARTER (GRATIS)
+                  STARTER
                 </span>
               )}
             </div>
@@ -2440,7 +2440,7 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                 </span>
               ) : (
                 <span className="text-[9px] bg-amber-500/30 text-amber-200 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30">
-                  STARTER (GRATIS)
+                  STARTER
                 </span>
               )}
             </div>
