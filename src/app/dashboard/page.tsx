@@ -2418,12 +2418,12 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
                 <div className="shrink-0 flex items-center space-x-2">
                   <span className="text-xs text-slate-400">Ada kendala?</span>
                   <a
-                    href="https://t.me/lukiramdani"
+                    href="https://wa.me/6281398068580?text=Halo%20Super%20Admin%20SimpanUang,%20saya%20ingin%20konfirmasi%20approval%20akun%20saya"
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 text-xs font-bold transition-all"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all flex items-center space-x-1"
                   >
-                    Hubungi Admin
+                    <span>💬 WhatsApp Super Admin</span>
                   </a>
                 </div>
               </div>

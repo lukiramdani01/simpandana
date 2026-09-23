@@ -260,13 +260,13 @@ export default function RegisterPage() {
 
                 <div className="pt-2 flex flex-col gap-2.5">
                   <a
-                    href="https://t.me/lukiramdani"
+                    href={`https://wa.me/6281398068580?text=${encodeURIComponent(`Halo Super Admin SimpanUang, saya ingin konfirmasi pendaftaran akun:\nNama: ${registeredData.fullName}\nEmail: ${registeredData.email}\nMohon bantuannya untuk approval akun saya. Terima kasih!`)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-lg"
+                    className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-extrabold text-xs flex items-center justify-center space-x-2 transition-all shadow-lg shadow-emerald-950/40"
                   >
-                    <span>💬</span>
-                    <span>Hubungi Super Admin (Telegram)</span>
+                    <span className="text-base">💬</span>
+                    <span>Hubungi Super Admin (WhatsApp)</span>
                   </a>
                   <Link
                     href={`/login?email=${encodeURIComponent(registeredData.email)}`}

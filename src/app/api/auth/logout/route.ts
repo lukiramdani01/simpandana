@@ -1,12 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
-  const response = NextResponse.json({
-    ok: true,
-    message: 'Logout berhasil.',
-  });
+function clearSessionAndRedirect(request: NextRequest) {
+  const loginUrl = new URL('/login', request.url);
+  const response = NextResponse.redirect(loginUrl);
 
   const expiredCookieOptions = {
     path: '/',
@@ -21,4 +19,12 @@ export async function POST() {
   response.cookies.set('tatadana_user_status', '', expiredCookieOptions);
 
   return response;
+}
+
+export async function GET(request: NextRequest) {
+  return clearSessionAndRedirect(request);
+}
+
+export async function POST(request: NextRequest) {
+  return clearSessionAndRedirect(request);
 }

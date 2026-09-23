@@ -17,15 +17,20 @@ export async function GET(req: NextRequest) {
   let targetUser = superadminUser;
   let redirectTarget = req.nextUrl.searchParams.get('to') || '/admin';
 
-  if (requestedEmail && requestedEmail.toLowerCase().includes('djmtire')) {
+  if (requestedEmail && requestedEmail.toLowerCase() !== 'lramdanie02@gmail.com') {
+    const emailClean = requestedEmail.toLowerCase();
+    let name = emailClean.split('@')[0];
+    if (emailClean.includes('bengkel')) name = 'Bengkel Jaya Abadi';
+    if (emailClean.includes('djmtire')) name = 'Djm Tire';
+
     targetUser = {
-      id: 'usr-1790097410738-28',
-      email: 'djmtire21@gmail.com',
-      full_name: 'Djm Tire',
+      id: `usr-${Date.now()}`,
+      email: emailClean,
+      full_name: name,
       role: 'user',
       plan: 'starter',
       email_verified: true,
-      approval_status: 'pending_approval',
+      approval_status: 'approved',
     };
     redirectTarget = req.nextUrl.searchParams.get('to') || '/dashboard';
   }
