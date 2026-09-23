@@ -247,10 +247,16 @@ export function generatePdfBuffer(
   const netCashflow = totalIncome - totalExpense;
 
   let streamContent = '';
-  // Top Title Banner (Use ASCII hyphen instead of UTF-8 em-dash to avoid font encoding mojibake)
+
+  // 1. Header Box Decoration (Dark Blue Pill Header background)
+  streamContent += '0.06 0.12 0.28 rg\n'; // Primary Blue background
+  streamContent += '40 735 515 70 re f\n'; // Rectangle [x, y, w, h]
+
+  // Top Title Banner
   streamContent += 'BT\n';
-  streamContent += '/F2 18 Tf\n';
-  streamContent += '50 780 Td\n';
+  streamContent += '/F2 16 Tf\n';
+  streamContent += '1 1 1 rg\n'; // White text
+  streamContent += '55 775 Td\n';
   streamContent += `(${escapePdf('SIMPANUANG (TATADANA) - LAPORAN KEUANGAN')}) Tj\n`;
   streamContent += 'ET\n';
 
@@ -264,61 +270,112 @@ export function generatePdfBuffer(
 
   streamContent += 'BT\n';
   streamContent += '/F1 9 Tf\n';
-  streamContent += '50 760 Td\n';
-  streamContent += `(${escapePdf(`Periode: ${startDate} s/d ${endDate} | Dicetak: ${wibTimeStr} WIB`)}) Tj\n`;
+  streamContent += '0.8 0.9 1 rg\n'; // Light blue text
+  streamContent += '55 750 Td\n';
+  streamContent += `(${escapePdf(`Periode: ${startDate} s/d ${endDate}  |  Dicetak: ${wibTimeStr} WIB`)}) Tj\n`;
   streamContent += 'ET\n';
 
-  // Summary box
+  // Reset to dark text
+  streamContent += '0.1 0.1 0.1 rg\n';
+
+  // 2. Summary KPI Box (Light Grey Box with Border)
+  streamContent += '0.96 0.97 0.99 rg\n';
+  streamContent += '40 655 515 65 re f\n';
+  streamContent += '0.82 0.86 0.92 RG\n'; // Border stroke color
+  streamContent += '0.8 w\n';
+  streamContent += '40 655 515 65 re S\n';
+
+  // Summary Metrics Text (3 Columns layout)
+  streamContent += 'BT\n';
+  streamContent += '/F2 8.5 Tf\n';
+  streamContent += '0.35 0.4 0.5 rg\n';
+  streamContent += '55 698 Td\n';
+  streamContent += `(${escapePdf('TOTAL PEMASUKAN')}) Tj\n`;
+  streamContent += '165 0 Td\n';
+  streamContent += `(${escapePdf('TOTAL PENGELUARAN')}) Tj\n`;
+  streamContent += '175 0 Td\n';
+  streamContent += `(${escapePdf('NET CASHFLOW')}) Tj\n`;
+  streamContent += 'ET\n';
+
+  // Subtitle string for tests backward compatibility & clean visual
   streamContent += 'BT\n';
   streamContent += '/F2 10 Tf\n';
-  streamContent += '50 730 Td\n';
+  // Total Income (Green)
+  streamContent += '0.08 0.6 0.35 rg\n';
+  streamContent += '55 675 Td\n';
   streamContent += `(${escapePdf(`Total Pemasukan: Rp ${totalIncome.toLocaleString('id-ID')}`)}) Tj\n`;
-  streamContent += '0 -14 Td\n';
+  // Total Expense (Red/Rose)
+  streamContent += '0.85 0.18 0.18 rg\n';
+  streamContent += '165 0 Td\n';
   streamContent += `(${escapePdf(`Total Pengeluaran: Rp ${totalExpense.toLocaleString('id-ID')}`)}) Tj\n`;
-  streamContent += '0 -14 Td\n';
+  // Net Cashflow (Blue or Red depending on sign)
+  if (netCashflow >= 0) {
+    streamContent += '0.1 0.45 0.9 rg\n';
+  } else {
+    streamContent += '0.85 0.18 0.18 rg\n';
+  }
+  streamContent += '175 0 Td\n';
   streamContent += `(${escapePdf(`Net Cashflow: Rp ${netCashflow.toLocaleString('id-ID')} (${netCashflow >= 0 ? 'Surplus' : 'Defisit'})`)}) Tj\n`;
   streamContent += 'ET\n';
 
-  // Table header with adjusted wide column layout
+  // 3. Table Header Bar (Dark Navy Fill)
+  streamContent += '0.12 0.18 0.28 rg\n';
+  streamContent += '40 620 515 22 re f\n';
+
+  // Table Column Titles
   streamContent += 'BT\n';
-  streamContent += '/F2 9 Tf\n';
-  streamContent += '50 670 Td\n';
-  streamContent += `(${escapePdf('TGL')}        ${escapePdf('JENIS')}      ${escapePdf('NOMINAL')}          ${escapePdf('KATEGORI')}              ${escapePdf('DOMPET')}          ${escapePdf('CATATAN')}) Tj\n`;
+  streamContent += '/F2 8.5 Tf\n';
+  streamContent += '1 1 1 rg\n'; // White text
+  streamContent += '50 627 Td\n';
+  streamContent += `(${escapePdf('TANGGAL')}      ${escapePdf('JENIS')}      ${escapePdf('NOMINAL')}          ${escapePdf('KATEGORI')}              ${escapePdf('DOMPET')}          ${escapePdf('CATATAN')}) Tj\n`;
   streamContent += 'ET\n';
 
-  // Divider line
-  streamContent += '0.5 w\n';
-  streamContent += '50 663 m 545 663 l S\n';
+  // Table rows with alternating zebra striping
+  let y = 600;
+  const rows = transactions.slice(0, 30);
 
-  // Table rows (up to 25 rows per page)
-  let y = 648;
-  streamContent += 'BT\n';
-  streamContent += '/F1 8.5 Tf\n';
-  streamContent += `50 ${y} Td\n`;
-
-  const rows = transactions.slice(0, 25);
   for (let i = 0; i < rows.length; i++) {
     const tx = rows[i];
+    const isEven = i % 2 === 0;
+
+    // Row zebra background
+    if (isEven) {
+      streamContent += '0.97 0.98 1.0 rg\n';
+      streamContent += `40 ${y - 4} 515 18 re f\n`;
+    }
+
+    // Row Bottom Border Line
+    streamContent += '0.9 0.92 0.95 RG\n';
+    streamContent += '0.4 w\n';
+    streamContent += `40 ${y - 4} m 555 ${y - 4} l S\n`;
+
     const typeTag = tx.type === 'income' ? '[+IN]' : '[-OUT]';
     const amountStr = `Rp ${tx.amount.toLocaleString('id-ID')}`.padEnd(14, ' ');
     const catStr = (tx.category_name || '-').slice(0, 22).padEnd(23, ' ');
     const walletStr = (tx.wallet_name || '-').slice(0, 16).padEnd(17, ' ');
-    const notesStr = (tx.notes || '').slice(0, 25);
+    const notesStr = (tx.notes || '').slice(0, 26);
     const line = `${tx.date}  ${typeTag.padEnd(7, ' ')} ${amountStr} ${catStr} ${walletStr} ${notesStr}`;
-    
-    if (i === 0) {
-      streamContent += `(${escapePdf(line)}) Tj\n`;
-    } else {
-      streamContent += `0 -15 Td (${escapePdf(line)}) Tj\n`;
-    }
-  }
-  streamContent += 'ET\n';
 
-  // Footer
+    streamContent += 'BT\n';
+    streamContent += '/F1 8 Tf\n';
+    streamContent += '0.15 0.18 0.25 rg\n'; // Clean readable charcoal text
+    streamContent += `50 ${y} Td\n`;
+    streamContent += `(${escapePdf(line)}) Tj\n`;
+    streamContent += 'ET\n';
+
+    y -= 18;
+  }
+
+  // Footer Box
+  streamContent += '0.85 0.88 0.92 RG\n';
+  streamContent += '0.5 w\n';
+  streamContent += '40 55 m 555 55 l S\n';
+
   streamContent += 'BT\n';
-  streamContent += '/F1 8 Tf\n';
-  streamContent += '50 50 Td\n';
-  streamContent += `(${escapePdf('Dokumen sah digenerate secara otomatis oleh SimpanUang (TataDana) Financial Intelligence System.')}) Tj\n`;
+  streamContent += '/F1 7.5 Tf\n';
+  streamContent += '0.45 0.5 0.6 rg\n';
+  streamContent += '50 42 Td\n';
+  streamContent += `(${escapePdf('Laporan resmi SimpanUang (TataDana) Financial Intelligence • Akses Akun Pro Lifetime • simpandana.my.id')}) Tj\n`;
   streamContent += 'ET\n';
 
   const streamBuf = Buffer.from(streamContent, 'utf-8');

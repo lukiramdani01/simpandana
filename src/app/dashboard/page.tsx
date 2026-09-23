@@ -3209,22 +3209,44 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <a
-                    href={`/api/reports/export?format=xlsx&download=true&startDate=${customStartDate}&endDate=${customEndDate}`}
-                    download={`SimpanUang_Laporan_${periodFilter}.xlsx`}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSuper = (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' || (profile as any)?.role === 'superadmin';
+                      const isPro = profile?.plan === 'pro' || isSuper;
+                      if (!isPro) {
+                        setShowUpgradeModal(true);
+                        return;
+                      }
+                      window.location.href = `/api/reports/export?format=xlsx&download=true&plan=pro&startDate=${customStartDate}&endDate=${customEndDate}`;
+                    }}
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 flex items-center space-x-1.5 transition-all shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download Excel</span>
-                  </a>
-                  <a
-                    href={`/api/reports/export?format=pdf&download=true&startDate=${customStartDate}&endDate=${customEndDate}`}
-                    download={`SimpanUang_Laporan_${periodFilter}.pdf`}
+                    {!(profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com') && (
+                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded font-extrabold ml-1">PRO</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSuper = (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' || (profile as any)?.role === 'superadmin';
+                      const isPro = profile?.plan === 'pro' || isSuper;
+                      if (!isPro) {
+                        setShowUpgradeModal(true);
+                        return;
+                      }
+                      window.location.href = `/api/reports/export?format=pdf&download=true&plan=pro&startDate=${customStartDate}&endDate=${customEndDate}`;
+                    }}
                     className="px-4 py-2 rounded-xl text-xs font-extrabold apple-blue-gradient text-white shadow-lg glow-blue hover:brightness-110 flex items-center space-x-1.5 transition-all"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download PDF</span>
-                  </a>
+                    {!(profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com') && (
+                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded font-extrabold ml-1">PRO</span>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -4965,27 +4987,45 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
             </div>
 
             {/* Benefit List (Sama Persis seperti di Landing Page) */}
-            <div className="space-y-2.5 text-xs text-slate-200">
-              <p className="font-bold text-white text-[13px] mb-1">Benefit Eksklusif Paket Pro Seumur Hidup:</p>
-              <div className="flex items-start space-x-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Transaksi Tanpa Batas (Unlimited)</strong> — Catat keuangan bebas tanpa limit 100 tx bulanan.</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Input Foto Struk dengan AI Vision OCR Cerdas</strong> — Cukup foto struk belanja, bot otomatis mencatat rinciannya.</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Unlimited Multi-Wallet</strong> — Kelola BCA, Mandiri, Cash, GoPay, OVO, ShopeePay tanpa batasan dompet.</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>Export Laporan Keuangan Lengkap</strong> — Download format PDF & Excel (.xlsx) resmi kapan pun.</span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span><strong>AI Financial Advisor Proaktif</strong> — Dapatkan analisis finansial & rekomendasi penghematan cerdas.</span>
+            <div className="space-y-3 text-xs text-slate-200">
+              <p className="font-extrabold text-white text-[13px]">Benefit Eksklusif Paket Pro Seumur Hidup:</p>
+              
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/10 space-y-2.5">
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-emerald-400 font-bold text-sm">✓</span>
+                  <div>
+                    <strong className="text-white">Download Laporan PDF & Excel Resmi</strong>
+                    <p className="text-[11px] text-slate-400">Unduh riwayat transaksi, arus kas & ringkasan rapi dalam format PDF & XLSX kapan saja.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-emerald-400 font-bold text-sm">✓</span>
+                  <div>
+                    <strong className="text-white">Transaksi Tanpa Batas (Unlimited)</strong>
+                    <p className="text-[11px] text-slate-400">Catat keuangan bebas tanpa batas limit 100 transaksi bulanan.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-emerald-400 font-bold text-sm">✓</span>
+                  <div>
+                    <strong className="text-white">Input Foto Struk dengan AI Vision OCR Cerdas</strong>
+                    <p className="text-[11px] text-slate-400">Cukup foto struk belanja, AI otomatis membaca item belanja, nominal, dan toko.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-emerald-400 font-bold text-sm">✓</span>
+                  <div>
+                    <strong className="text-white">Unlimited Multi-Wallet Bebas</strong>
+                    <p className="text-[11px] text-slate-400">Kelola BCA, Mandiri, Cash, GoPay, OVO, ShopeePay tanpa batasan jumlah dompet.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2.5">
+                  <span className="text-emerald-400 font-bold text-sm">✓</span>
+                  <div>
+                    <strong className="text-white">AI Financial Advisor Proaktif</strong>
+                    <p className="text-[11px] text-slate-400">Rekomendasi penghematan cerdas & deteksi lonjakan pengeluaran berlebihan.</p>
+                  </div>
+                </div>
               </div>
             </div>
 
