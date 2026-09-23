@@ -628,7 +628,13 @@ export default function DashboardPage() {
   const [budgetLimitInput, setBudgetLimitInput] = useState('1500000');
 
   // Upgrade Pro Modal State
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('open_upgrade') === '1';
+    }
+    return false;
+  });
 
   // Receipt OCR State
   const [showInteractiveReceiptCard, setShowInteractiveReceiptCard] = useState(false);
