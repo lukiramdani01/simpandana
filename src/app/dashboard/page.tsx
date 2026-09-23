@@ -548,7 +548,16 @@ export default function DashboardPage() {
   const [testBotResult, setTestBotResult] = useState<{ status: string; message: string } | null>(null);
 
   // User Settings Sub-Tabs State
-  const [settingsSubTab, setSettingsSubTab] = useState<'profil' | 'telegram' | 'reminder' | 'kategori'>('profil');
+  const [settingsSubTab, setSettingsSubTab] = useState<'profil' | 'telegram' | 'reminder' | 'kategori'>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const sub = p.get('subtab');
+      if (sub === 'categories' || sub === 'kategori') return 'kategori';
+      if (sub === 'telegram') return 'telegram';
+      if (sub === 'reminder') return 'reminder';
+    }
+    return 'profil';
+  });
 
   // Profile Form States
   const [profileFullName, setProfileFullName] = useState(profile.full_name);
