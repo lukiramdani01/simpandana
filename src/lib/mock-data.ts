@@ -60,6 +60,8 @@ export const initialCategories: Category[] = [
   { id: 'c-4', name: 'Belanja', type: 'expense', icon: '👕', color: '#3B82F6', is_default: true },
   { id: 'c-5', name: 'Hiburan', type: 'expense', icon: '🎮', color: '#8B5CF6', is_default: true },
   { id: 'c-6', name: 'Kesehatan', type: 'expense', icon: '💊', color: '#10B981', is_default: true },
+  { id: 'c-tabungan', name: 'Tabungan', type: 'expense', icon: '🏦', color: '#06B6D4', is_default: true },
+  { id: 'c-investasi', name: 'Investasi', type: 'expense', icon: '📈', color: '#10B981', is_default: true },
   { id: 'c-7', name: 'Gaji Bulanan', type: 'income', icon: '💼', color: '#10B981', is_default: true },
   { id: 'c-8', name: 'Freelance & Bonus', type: 'income', icon: '💰', color: '#059669', is_default: true },
 ];

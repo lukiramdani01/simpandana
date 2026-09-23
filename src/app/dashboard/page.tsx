@@ -613,6 +613,9 @@ export default function DashboardPage() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [budgetCategoryName, setBudgetCategoryName] = useState('Makanan & Minuman');
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [customCategoryIcon, setCustomCategoryIcon] = useState('🎯');
   const [budgetLimitInput, setBudgetLimitInput] = useState('1500000');
 
   // Upgrade Pro Modal State
@@ -1367,13 +1370,47 @@ export default function DashboardPage() {
         prev.map((b) => (b.id === editingBudget.id ? { ...b, monthly_limit: limitNum } : b))
       );
     } else {
-      const selectedCat = categories.find((c) => c.name === budgetCategoryName);
+      let finalCatName = budgetCategoryName;
+      let finalCatIcon = '🎯';
+      let finalCatId = `c-${Date.now()}`;
+
+      if (isCustomCategory) {
+        if (!customCategoryInput.trim()) {
+          alert('Masukkan nama kategori custom Anda.');
+          return;
+        }
+        finalCatName = customCategoryInput.trim();
+        finalCatIcon = customCategoryIcon || '🎯';
+        // Add to categories list if not exists
+        const existingCat = categories.find((c) => c.name.toLowerCase() === finalCatName.toLowerCase());
+        if (existingCat) {
+          finalCatId = existingCat.id;
+          finalCatIcon = existingCat.icon;
+        } else {
+          const newCat: Category = {
+            id: finalCatId,
+            name: finalCatName,
+            type: 'expense',
+            icon: finalCatIcon,
+            color: '#3B82F6',
+            is_default: false,
+          };
+          setCategories((prev) => [...prev, newCat]);
+        }
+      } else {
+        const selectedCat = categories.find((c) => c.name === budgetCategoryName);
+        if (selectedCat) {
+          finalCatId = selectedCat.id;
+          finalCatIcon = selectedCat.icon;
+        }
+      }
+
       const newBudget: Budget = {
         id: `b-${Date.now()}`,
         user_id: profile.id,
-        category_id: selectedCat?.id || `c-${Date.now()}`,
-        category_name: budgetCategoryName,
-        category_icon: selectedCat?.icon || '🎯',
+        category_id: finalCatId,
+        category_name: finalCatName,
+        category_icon: finalCatIcon,
         monthly_limit: limitNum,
         current_spent: 0,
         month: new Date().getMonth() + 1,
@@ -1386,6 +1423,8 @@ export default function DashboardPage() {
 
     setShowBudgetModal(false);
     setEditingBudget(null);
+    setIsCustomCategory(false);
+    setCustomCategoryInput('');
     setBudgetLimitInput('');
   };
 
@@ -5113,8 +5152,15 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
               <div>
                 <label className="block font-bold text-slate-300 mb-1">Kategori Transaksi</label>
                 <select
-                  value={budgetCategoryName}
-                  onChange={(e) => setBudgetCategoryName(e.target.value)}
+                  value={isCustomCategory ? '__CUSTOM__' : budgetCategoryName}
+                  onChange={(e) => {
+                    if (e.target.value === '__CUSTOM__') {
+                      setIsCustomCategory(true);
+                    } else {
+                      setIsCustomCategory(false);
+                      setBudgetCategoryName(e.target.value);
+                    }
+                  }}
                   disabled={!!editingBudget}
                   className="w-full p-2.5 bg-slate-900/90 border border-white/10 rounded-xl outline-none focus:border-blue-500 text-white font-semibold disabled:opacity-60"
                 >
@@ -5125,8 +5171,40 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
                         {c.icon} {c.name}
                       </option>
                     ))}
+                  <option value="__CUSTOM__">✨ Lainnya (Buat Kategori Sendiri...)</option>
                 </select>
               </div>
+
+              {/* INPUT CUSTOM CATEGORY JIKA PILIH LAINNYA */}
+              {isCustomCategory && !editingBudget && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-[11px]">✨ Nama Budget / Kategori Baru</span>
+                    <div className="flex gap-1">
+                      {['🎯', '💎', '📚', '🏖️', '🎁', '⚡'].map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setCustomCategoryIcon(emoji)}
+                          className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center ${
+                            customCategoryIcon === emoji ? 'bg-blue-600 text-white' : 'bg-white/5 hover:bg-white/10'
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={customCategoryInput}
+                    onChange={(e) => setCustomCategoryInput(e.target.value)}
+                    placeholder="Contoh: Liburan Akhir Tahun, Kursus Coding, Renovasi..."
+                    className="w-full p-2 bg-slate-900 border border-white/20 rounded-lg text-white font-semibold outline-none focus:border-blue-400 placeholder:text-slate-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1">Target Plafon Bulanan (Rp)</label>
