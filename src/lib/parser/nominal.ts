@@ -275,6 +275,28 @@ export function parseIndonesianNominal(text: string): ParsedNominal {
   ) {
     categoryHint = 'Belanja';
   } else if (
+    lower.includes('nabung') ||
+    lower.includes('menabung') ||
+    lower.includes('tabungan') ||
+    lower.includes('simpan uang') ||
+    lower.includes('simpan dana') ||
+    lower.includes('celengan')
+  ) {
+    categoryHint = 'Tabungan';
+  } else if (
+    lower.includes('investasi') ||
+    lower.includes('invest') ||
+    lower.includes('saham') ||
+    lower.includes('reksadana') ||
+    lower.includes('crypto') ||
+    lower.includes('kripto') ||
+    lower.includes('emas') ||
+    lower.includes('bibit') ||
+    lower.includes('ajaib') ||
+    lower.includes('pluang')
+  ) {
+    categoryHint = 'Investasi';
+  } else if (
     lower.includes('nonton') ||
     lower.includes('bioskop') ||
     lower.includes('game') ||

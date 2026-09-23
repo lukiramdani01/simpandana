@@ -31,6 +31,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Gaji': '💼',
   'Belanja': '👕',
   'Hiburan': '🎮',
+  'Tabungan': '🏦',
+  'Investasi': '📈',
   'Pemasukan': '💰',
   'Lainnya': '📦',
   'Lain-lain': '📦',
