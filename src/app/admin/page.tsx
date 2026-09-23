@@ -34,6 +34,7 @@ import { AIProviderConfig, AILog } from '@/lib/types';
 interface AdminUser {
   id: string;
   full_name: string;
+  email?: string;
   phone: string;
   plan: 'starter' | 'pro';
   approval_status?: 'pending_approval' | 'approved' | 'rejected';
@@ -485,6 +486,7 @@ export default function AdminDashboardPage() {
           const mappedUsers = data.users.map((u: any) => ({
             id: u.id,
             full_name: u.full_name || 'User Telegram',
+            email: u.email || '-',
             phone: u.phone || '-',
             plan: u.plan || 'pro',
             approval_status: u.approval_status || 'approved',
@@ -1479,6 +1481,7 @@ export default function AdminDashboardPage() {
                     <tr>
                       <th className="py-3 px-3">User ID</th>
                       <th className="py-3 px-3">Nama Pengguna</th>
+                      <th className="py-3 px-3">Email</th>
                       <th className="py-3 px-3">Telegram Username</th>
                       <th className="py-3 px-3">Plan</th>
                       <th className="py-3 px-3">Status Persetujuan</th>
@@ -1492,6 +1495,7 @@ export default function AdminDashboardPage() {
                       <tr key={user.id} className="hover:bg-white/5">
                         <td className="py-3 px-3 font-mono text-slate-400 text-[11px]">{user.id}</td>
                         <td className="py-3 px-3 font-bold text-white">{user.full_name}</td>
+                        <td className="py-3 px-3 text-amber-300 font-mono text-[11px]">{user.email || '-'}</td>
                         <td className="py-3 px-3 text-cyan-400 font-mono">@{user.telegram_username || 'tidak_ada'}</td>
                         <td className="py-3 px-3">
                           <span
