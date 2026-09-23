@@ -4046,8 +4046,25 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
               {/* 5 Real Category Budgets List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-white">Rincian 5 Target Anggaran Kategori</h3>
-                  <span className="text-xs text-slate-400">Otomatis sinkron dengan pencatatan Telegram & Web</span>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white">Rincian Target Anggaran Kategori</h3>
+                    <p className="text-xs text-slate-400">Otomatis sinkron dengan pencatatan Telegram & Web</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingBudget(null);
+                      setBudgetCategoryName(categories[0]?.name || 'Makanan & Minuman');
+                      setBudgetLimitInput('1000000');
+                      setIsCustomCategory(false);
+                      setCustomCategoryInput('');
+                      setShowBudgetModal(true);
+                    }}
+                    className="px-4 py-2 rounded-2xl apple-blue-gradient text-white text-xs font-extrabold shadow-lg glow-blue hover:brightness-110 flex items-center space-x-1.5 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Atur Target Budget</span>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
