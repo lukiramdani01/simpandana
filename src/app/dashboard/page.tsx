@@ -219,18 +219,76 @@ export default function DashboardPage() {
         }
 
         const activeUserId = savedUser?.id || 'usr-101';
+        
+        // 1. Isolasi Transaksi per User
         const savedTxsStr = localStorage.getItem(`tatadana_transactions_${activeUserId}`);
         if (savedTxsStr) {
           const parsedTxs = JSON.parse(savedTxsStr);
-          if (Array.isArray(parsedTxs) && parsedTxs.length > 0) {
-            setTransactions((prev) => {
-              const map = new Map<string, Transaction>();
-              prev.forEach((t) => map.set(t.id, t));
-              parsedTxs.forEach((t) => map.set(t.id, t));
-              return Array.from(map.values()).sort(
-                (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-              );
-            });
+          if (Array.isArray(parsedTxs)) {
+            setTransactions(parsedTxs);
+          }
+        } else {
+          // User baru: transaksi bermula dari KOSONG (0)
+          setTransactions([]);
+        }
+
+        // 2. Isolasi Dompet (Wallets) per User
+        const savedWalletsStr = localStorage.getItem(`tatadana_wallets_${activeUserId}`);
+        if (savedWalletsStr) {
+          const parsedWallets = JSON.parse(savedWalletsStr);
+          if (Array.isArray(parsedWallets) && parsedWallets.length > 0) {
+            setWallets(parsedWallets);
+          }
+        } else {
+          // User baru: dompet default bersih dengan saldo Rp 0
+          const defaultUserWallets: Wallet[] = [
+            {
+              id: `w-bca-${activeUserId}`,
+              user_id: activeUserId,
+              name: 'BCA Utama',
+              type: 'bank',
+              balance: 0,
+              initial_balance: 0,
+              is_default: true,
+              icon: '🏦',
+              color: '#0066AE',
+              account_number: 'BCA',
+            },
+            {
+              id: `w-mandiri-${activeUserId}`,
+              user_id: activeUserId,
+              name: 'Mandiri Tabungan',
+              type: 'bank',
+              balance: 0,
+              initial_balance: 0,
+              is_default: false,
+              icon: '💳',
+              color: '#003D79',
+              account_number: 'Mandiri',
+            },
+            {
+              id: `w-gopay-${activeUserId}`,
+              user_id: activeUserId,
+              name: 'GoPay',
+              type: 'ewallet',
+              balance: 0,
+              initial_balance: 0,
+              is_default: false,
+              icon: '📱',
+              color: '#00AED6',
+              account_number: 'E-Wallet',
+            },
+          ];
+          setWallets(defaultUserWallets);
+          localStorage.setItem(`tatadana_wallets_${activeUserId}`, JSON.stringify(defaultUserWallets));
+        }
+
+        // 3. Isolasi Target Budget per User
+        const savedBudgetsStr = localStorage.getItem(`tatadana_budgets_${activeUserId}`);
+        if (savedBudgetsStr) {
+          const parsedBudgets = JSON.parse(savedBudgetsStr);
+          if (Array.isArray(parsedBudgets)) {
+            setBudgets(parsedBudgets);
           }
         }
       } catch (err) {
@@ -420,8 +478,26 @@ export default function DashboardPage() {
   // Data States
   const [profile, setProfile] = useState(initialProfile);
   const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
+
+  // Sync Wallets to User-isolated Storage on every change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && profile?.id && wallets.length > 0) {
+      try {
+        localStorage.setItem(`tatadana_wallets_${profile.id}`, JSON.stringify(wallets));
+      } catch {}
+    }
+  }, [wallets, profile?.id]);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
+
+  // Sync Budgets to User-isolated Storage on every change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && profile?.id && budgets.length > 0) {
+      try {
+        localStorage.setItem(`tatadana_budgets_${profile.id}`, JSON.stringify(budgets));
+      } catch {}
+    }
+  }, [budgets, profile?.id]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
 
   // New Transaction Modal State
@@ -567,15 +643,18 @@ export default function DashboardPage() {
   const userTransactions = useMemo(() => {
     const activeUserId = profile?.id || 'usr-101';
     const tgUserId = profile?.telegram_user_id?.toString();
-    const filtered = transactions.filter(
-      (t) =>
-        !t.user_id ||
-        t.user_id === activeUserId ||
-        t.user_id === 'usr-101' ||
-        (tgUserId && (t.user_id === tgUserId || String(t.user_id) === tgUserId))
-    );
+    const userEmail = (profile as any)?.email?.toLowerCase();
+    const isSuper = userEmail === 'lramdanie02@gmail.com' || (profile as any)?.role === 'superadmin';
+
+    const filtered = transactions.filter((t) => {
+      // Isolasi data ketat: hanya transaksi milik user yang aktif saat ini
+      if (t.user_id === activeUserId) return true;
+      if (tgUserId && (t.user_id === tgUserId || String(t.user_id) === tgUserId)) return true;
+      if (isSuper && t.user_id === 'usr-101') return true;
+      return false;
+    });
     return [...filtered].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-  }, [transactions, profile?.id, profile?.telegram_user_id]);
+  }, [transactions, profile?.id, profile?.telegram_user_id, (profile as any)?.email]);
 
   // Period Filtered Transactions
   const filteredTransactions = useMemo(() => {
