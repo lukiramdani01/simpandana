@@ -2050,95 +2050,34 @@ Setiap transaksi yang kamu chat di sini otomatis memotong budget kategori terseb
       return;
     }
 
-    // 7. Natural Language Transaction Parsing (NLP) with Instant Execution & Interactive Confirmation
+    // 7. Natural Language Transaction Parsing (NLP) with Direct Interactive Wallet Choice in Chat
     const parsed = parseTransactionFromText(textToSend);
     if (parsed && parsed.amount > 0) {
       const isExp = parsed.type === 'expense';
-      let chosenWallet = botSelectedWalletId
-        ? displayedWallets.find((w) => w.id === botSelectedWalletId) || displayedWallets[0]
-        : (displayedWallets.find((w) => w.is_default) || displayedWallets[0]);
 
-      if (lower.includes('bca')) {
-        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('bca')) || chosenWallet;
-      } else if (lower.includes('mandiri')) {
-        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('mandiri')) || chosenWallet;
-      } else if (lower.includes('gopay') || lower.includes('go-pay')) {
-        chosenWallet = displayedWallets.find((w) => w.name.toLowerCase().includes('gopay')) || chosenWallet;
-      } else if (lower.includes('cash') || lower.includes('tunai') || lower.includes('dompet')) {
-        chosenWallet = displayedWallets.find((w) => w.id === 'w_cash' || w.name.toLowerCase().includes('cash') || w.name.toLowerCase().includes('tunai')) || chosenWallet;
-      }
+      // Pesan konfirmasi detail transaksi dengan pilihan tombol dompet di bawahnya
+      const askWalletReply = `📅 ${now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} — ${timeStr}
+📝 **Detail Transaksi Terdeteksi:**
+├ Nominal : **Rp${parsed.amount.toLocaleString('id-ID')}**
+├ Kategori : ${parsed.categoryIcon} **${parsed.category}**
+└ Catatan : *${parsed.notes || textToSend}*
 
-      // Record immediately into state, localStorage, and database!
-      const result = recordNewTransaction({
-        type: parsed.type,
-        amount: parsed.amount,
-        category_name: parsed.category,
-        wallet_id: chosenWallet.id,
-        notes: parsed.notes || textToSend,
-        source: 'telegram_text',
-      });
-
-      const dayName = now.toLocaleDateString('id-ID', { weekday: 'long' });
-      const dateFormatted = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-      // Target budget progress if expense
-      const targetBudget = budgets.find(
-        (b) =>
-          (b.category_name || '').toLowerCase().includes(parsed.category.toLowerCase()) ||
-          parsed.category.toLowerCase().includes((b.category_name || '').toLowerCase())
-      ) || {
-        monthly_limit: parsed.amount * 2,
-        current_spent: parsed.amount,
-        category_icon: parsed.categoryIcon,
-      };
-      const updatedSpent = targetBudget.current_spent + (isExp ? parsed.amount : 0);
-      const pct = Math.min(100, Math.round((updatedSpent / targetBudget.monthly_limit) * 100));
-      const bars = '█'.repeat(Math.floor(pct / 10)) + '░'.repeat(10 - Math.floor(pct / 10));
-      const sisaCat = Math.max(0, targetBudget.monthly_limit - updatedSpent);
-
-      let confirmReply = '';
-      if (isExp) {
-        confirmReply = `📅 ${dayName}, ${dateFormatted} — ${timeStr}
-✅ **Pengeluaran Berhasil Dicatat ke ${chosenWallet.name}!**
-├ Nominal : Rp${parsed.amount.toLocaleString('id-ID')}
-├ Kategori : ${parsed.categoryIcon} ${parsed.category}
-├ Dompet : 👛 ${chosenWallet.name}
-├ Catatan : ${parsed.notes || textToSend}
-└ Sisa Saldo ${chosenWallet.name} : Rp${result.newWalletBalance.toLocaleString('id-ID')}
-
-📊 **Budget ${parsed.category} bulan ini:**
-[${bars}] ${pct}% — Sisa Rp${sisaCat.toLocaleString('id-ID')}
-${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '✨ Transaksi tercatat rapi.'}
-
-✨ *Transaksi otomatis masuk ke Beranda, Transaksi, dan Multi-Wallet!*`;
-      } else {
-        confirmReply = `📅 ${dayName}, ${dateFormatted} — ${timeStr}
-✅ **Pemasukan Berhasil Ditambahkan ke ${chosenWallet.name}!**
-├ Nominal : Rp${parsed.amount.toLocaleString('id-ID')}
-├ Kategori : 💰 Pemasukan
-├ Dompet : 👛 ${chosenWallet.name}
-├ Catatan : ${parsed.notes || textToSend}
-└ Saldo Baru ${chosenWallet.name} : Rp${result.newWalletBalance.toLocaleString('id-ID')}
-
-💪 Saldo ${chosenWallet.name} Anda bertambah.
-✨ *Tersinkronisasi langsung ke Dashboard & Laporan!*`;
-      }
+Silakan pilih dompet yang digunakan di bawah ini: 👇`;
 
       setTimeout(() => {
         setChatMessages((prev) => [
           ...prev,
           {
             sender: 'bot',
-            text: confirmReply,
+            text: askWalletReply,
             time: timeStr,
             pendingWalletChoice: {
-              id: result.tx.id,
+              id: `temp-${Date.now()}`,
               type: parsed.type,
               amount: parsed.amount,
               category: parsed.category,
               categoryIcon: parsed.categoryIcon,
               notes: parsed.notes || textToSend,
-              completedWallet: chosenWallet.name,
             },
           },
         ]);
@@ -5013,26 +4952,6 @@ ${pct >= 80 ? '⚠️ *Peringatan*: Budget kategori ini sudah mencapai 80%!' : '
               </div>
 
               <div className="flex items-center space-x-2">
-                {/* Selector Dompet Tujuan AI Bot */}
-                <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-white/10 px-2.5 py-1 rounded-xl">
-                  <span className="text-[11px] text-slate-400 font-semibold hidden md:inline">Dompet:</span>
-                  <select
-                    value={botSelectedWalletId}
-                    onChange={(e) => setBotSelectedWalletId(e.target.value)}
-                    className="bg-transparent text-white font-bold text-xs outline-none cursor-pointer max-w-[120px] sm:max-w-[150px] truncate"
-                    title="Pilih dompet pencatatan untuk transaksi dari chat ini"
-                  >
-                    <option value="" className="bg-slate-900 text-slate-300">
-                      ★ Otomatis (Default / Deteksi Nama)
-                    </option>
-                    {displayedWallets.map((w) => (
-                      <option key={w.id} value={w.id} className="bg-slate-900 text-white">
-                        {w.icon} {w.name} (Rp{w.balance.toLocaleString('id-ID')})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <button
                   type="button"
                   onClick={handleScanSampleReceipt}
