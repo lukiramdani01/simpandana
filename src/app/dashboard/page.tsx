@@ -180,6 +180,12 @@ export default function DashboardPage() {
         setActiveTab('laporan');
       } else if (tabParam === 'budget') {
         setActiveTab('budget');
+        if (params.get('open_budget') === '1') {
+          setEditingBudget(null);
+          setBudgetCategoryName('Tabungan');
+          setIsCustomCategory(false);
+          setShowBudgetModal(true);
+        }
       } else if (tabParam === 'settings') {
         setActiveTab('settings');
       }
