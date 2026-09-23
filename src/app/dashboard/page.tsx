@@ -615,6 +615,9 @@ export default function DashboardPage() {
   const [budgetCategoryName, setBudgetCategoryName] = useState('Makanan & Minuman');
   const [budgetLimitInput, setBudgetLimitInput] = useState('1500000');
 
+  // Upgrade Pro Modal State
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   // Receipt OCR State
   const [showInteractiveReceiptCard, setShowInteractiveReceiptCard] = useState(false);
   const [showTataAIModal, setShowTataAIModal] = useState(false);
@@ -1166,6 +1169,13 @@ export default function DashboardPage() {
     source?: 'web' | 'telegram_text' | 'telegram_photo' | 'telegram_voice';
     items?: Array<{ name: string; price: number; quantity?: number; category?: string }>;
   }) => {
+    // ENFORCE 100 TRANSACTIONS LIMIT FOR STARTER USERS
+    const isSuper = (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' || (profile as any)?.role === 'superadmin';
+    const isPro = profile?.plan === 'pro' || isSuper;
+    if (!isPro && userTransactions.length >= 100) {
+      setShowUpgradeModal(true);
+      throw new Error('Batas 100 transaksi paket Starter telah tercapai! Silakan upgrade ke Paket Pro Lifetime (Rp99.000).');
+    }
     const targetWalletId = txData.wallet_id || displayedWallets.find((w) => w.is_default)?.id || displayedWallets[0]?.id;
     const targetWallet = displayedWallets.find((w) => w.id === targetWalletId) || displayedWallets[0];
     const now = new Date();
@@ -2306,9 +2316,39 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
           <div className="p-3.5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold uppercase text-[#2997FF]">Paket Aktif</span>
-              <span className="text-[9px] bg-blue-500/30 text-blue-200 font-extrabold px-2 py-0.5 rounded-full border border-blue-500/30">PRO LIFETIME</span>
+              {profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' ? (
+                <span className="text-[9px] bg-blue-500/30 text-blue-200 font-extrabold px-2 py-0.5 rounded-full border border-blue-500/30">
+                  PRO LIFETIME
+                </span>
+              ) : (
+                <span className="text-[9px] bg-amber-500/30 text-amber-200 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30">
+                  STARTER (GRATIS)
+                </span>
+              )}
             </div>
-            <p className="text-xs font-bold text-white mt-1">Unlimited OCR & Laporan</p>
+            {profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' ? (
+              <p className="text-xs font-bold text-white mt-1">Unlimited OCR & Laporan</p>
+            ) : (
+              <div className="mt-1 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300">Kuota Transaksi:</span>
+                  <span className="font-bold text-white">{userTransactions.length} / 100</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-400 rounded-full"
+                    style={{ width: `${Math.min(100, (userTransactions.length / 100) * 100)}%` }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="w-full mt-2 py-1.5 rounded-xl apple-blue-gradient text-white text-[11px] font-extrabold shadow glow-blue hover:brightness-110 flex items-center justify-center space-x-1"
+                >
+                  <span>⚡ Upgrade ke Pro (Rp99k)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -2394,9 +2434,39 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
           <div className="p-3.5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold uppercase text-[#2997FF]">Paket Aktif</span>
-              <span className="text-[9px] bg-blue-500/30 text-blue-200 font-extrabold px-2 py-0.5 rounded-full border border-blue-500/30">PRO LIFETIME</span>
+              {profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' ? (
+                <span className="text-[9px] bg-blue-500/30 text-blue-200 font-extrabold px-2 py-0.5 rounded-full border border-blue-500/30">
+                  PRO LIFETIME
+                </span>
+              ) : (
+                <span className="text-[9px] bg-amber-500/30 text-amber-200 font-extrabold px-2 py-0.5 rounded-full border border-amber-500/30">
+                  STARTER (GRATIS)
+                </span>
+              )}
             </div>
-            <p className="text-xs font-bold text-white mt-1">Unlimited OCR & Laporan</p>
+            {profile?.plan === 'pro' || (profile as any)?.email?.toLowerCase() === 'lramdanie02@gmail.com' ? (
+              <p className="text-xs font-bold text-white mt-1">Unlimited OCR & Laporan</p>
+            ) : (
+              <div className="mt-1 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300">Kuota Transaksi:</span>
+                  <span className="font-bold text-white">{userTransactions.length} / 100</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-400 rounded-full"
+                    style={{ width: `${Math.min(100, (userTransactions.length / 100) * 100)}%` }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="w-full mt-2 py-1.5 rounded-xl apple-blue-gradient text-white text-[11px] font-extrabold shadow glow-blue hover:brightness-110 flex items-center justify-center space-x-1"
+                >
+                  <span>⚡ Upgrade ke Pro (Rp99k)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -4795,6 +4865,91 @@ Silakan pilih dompet yang digunakan di bawah ini: 👇`;
       )}
 
       {/* MODAL TRANSFER SALDO ANTAR WALLET */}
+      {/* MODAL UPGRADE PRO LIFETIME (99K) */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="liquid-glass rounded-3xl p-6 sm:p-8 max-w-lg w-full border-2 border-blue-500 shadow-2xl relative space-y-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-[#2997FF] border border-blue-500/30 text-xs font-bold">
+                  ⚡ UPGRADE AKUN PRO
+                </span>
+                <h3 className="font-black text-white text-xl sm:text-2xl mt-2">
+                  Ambil Akses Pro Seumur Hidup
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Batas kuota 100 transaksi paket Starter telah tercapai atau hampir habis. Nikmati seluruh fitur tanpa batas seumur hidup!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Price Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 via-blue-800/20 to-transparent border border-blue-500/30 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider block">Harga Promo Founding Member</span>
+                <span className="text-3xl font-black text-white">Rp99.000</span>
+                <span className="text-xs text-blue-300 font-semibold"> / Sekali Bayar Seumur Hidup</span>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-extrabold">
+                LIFETIME DEAL
+              </span>
+            </div>
+
+            {/* Benefit List (Sama Persis seperti di Landing Page) */}
+            <div className="space-y-2.5 text-xs text-slate-200">
+              <p className="font-bold text-white text-[13px] mb-1">Benefit Eksklusif Paket Pro Seumur Hidup:</p>
+              <div className="flex items-start space-x-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Transaksi Tanpa Batas (Unlimited)</strong> — Catat keuangan bebas tanpa limit 100 tx bulanan.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Input Foto Struk dengan AI Vision OCR Cerdas</strong> — Cukup foto struk belanja, bot otomatis mencatat rinciannya.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Unlimited Multi-Wallet</strong> — Kelola BCA, Mandiri, Cash, GoPay, OVO, ShopeePay tanpa batasan dompet.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>Export Laporan Keuangan Lengkap</strong> — Download format PDF & Excel (.xlsx) resmi kapan pun.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span><strong>AI Financial Advisor Proaktif</strong> — Dapatkan analisis finansial & rekomendasi penghematan cerdas.</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-col gap-2.5">
+              <a
+                href={`https://wa.me/6281398068580?text=${encodeURIComponent(`Halo Super Admin SimpanUang, saya ingin konfirmasi upgrade ke Akun Pro Lifetime (Rp99.000):\nNama: ${profile?.full_name || 'User'}\nEmail: ${(profile as any)?.email || profile?.id}\nMohon panduan pembayaran & aktivasi Pro Seumur Hidup. Terima kasih!`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs flex items-center justify-center space-x-2 transition-all shadow-lg shadow-emerald-950/40"
+              >
+                <span>💬</span>
+                <span>Upgrade via WhatsApp Admin (Rp99.000) →</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-2.5 text-xs text-slate-400 hover:text-white font-semibold text-center"
+              >
+                Nanti Saja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal: Edit / Setting Saldo Dompet */}
       {showEditBalanceModal && editingWallet && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">

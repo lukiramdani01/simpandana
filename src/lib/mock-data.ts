@@ -2,11 +2,11 @@ import { Wallet, Category, Budget, Transaction, UserProfile, AIProviderConfig, A
 
 export const initialProfile: UserProfile = {
   id: 'usr-101',
-  phone: '+6281234567890',
+  phone: '+628****7890',
   full_name: 'Luki Ramdani',
   default_currency: 'IDR',
   timezone: 'Asia/Jakarta',
-  plan: 'pro',
+  plan: 'starter',
   telegram_user_id: 182938491,
   telegram_chat_id: 182938491,
   telegram_bot_token: '7293849182:AAH9fklmN2xLpQ09v-example',
