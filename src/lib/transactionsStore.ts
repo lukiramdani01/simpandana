@@ -3,6 +3,8 @@
  * Synchronizes transactions across Telegram Webhook, Voice Processing, and Dashboard UI.
  */
 
+import fs from 'fs';
+import path from 'path';
 import { Transaction } from './types';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { initialTransactions, initialWallets, initialProfile } from './mock-data';
@@ -11,12 +13,37 @@ import { getWIBDateString } from '@/lib/telegram/formatter';
 import { withDbTimeout } from '@/lib/dbTimeout';
 import { realtimeEventBus } from '@/lib/realtime/eventBus';
 
+const TX_FILE_PATH = path.join('/tmp', 'tatadana_persistent_transactions.json');
+
 declare global {
   var __transactionsMemoryStore__: Transaction[] | undefined;
 }
 
+function loadDiskTransactions(): Transaction[] {
+  try {
+    if (fs.existsSync(TX_FILE_PATH)) {
+      const data = fs.readFileSync(TX_FILE_PATH, 'utf-8');
+      const parsed: Transaction[] = JSON.parse(data);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function saveDiskTransactions(txs: Transaction[]) {
+  try {
+    fs.writeFileSync(TX_FILE_PATH, JSON.stringify(txs, null, 2), 'utf-8');
+  } catch {}
+}
+
 if (!globalThis.__transactionsMemoryStore__) {
-  globalThis.__transactionsMemoryStore__ = [...initialTransactions];
+  const diskTxs = loadDiskTransactions();
+  const map = new Map<string, Transaction>();
+  initialTransactions.forEach((t) => map.set(t.id, t));
+  diskTxs.forEach((t) => map.set(t.id, t));
+  globalThis.__transactionsMemoryStore__ = Array.from(map.values()).sort(
+    (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
 }
 
 export const transactionsMemoryStore: Transaction[] = globalThis.__transactionsMemoryStore__;
@@ -174,11 +201,12 @@ export async function recordTransactionInStore(params: {
     created_at: now.toISOString(),
   };
 
-  // Prepend to memory store
+  // Prepend to memory store and save to disk
   transactionsMemoryStore.unshift(newTx);
   if (!initialTransactions.some((t) => t.id === newTx.id)) {
     initialTransactions.unshift(newTx);
   }
+  saveDiskTransactions(transactionsMemoryStore);
 
   // 2. Persist transaction into Supabase DB (protected with strict 50ms SLA timeout)
   try {

@@ -165,6 +165,7 @@ function getWIBDateDaysAgo(days: number): string {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const isInitialLoadedRef = React.useRef(false);
   const [activeTab, setActiveTab] = useState<'beranda' | 'transaksi' | 'laporan' | 'budget' | 'wallet' | 'settings' | 'admin' | 'bot_sim'>('beranda');
 
   // Sync initial tab from URL query param (?tab=wallets or ?tab=wallet)
@@ -240,6 +241,7 @@ export default function DashboardPage() {
               id: savedUser.id || prev.id,
               full_name: savedUser.full_name || prev.full_name,
               phone: userPhone,
+              email: savedUser.email || (prev as any)?.email,
               avatar_url: savedUser.avatar_url || prev.avatar_url,
               plan: savedUser.plan || prev.plan,
               approval_status: savedUser.approval_status || prev.approval_status,
@@ -252,26 +254,78 @@ export default function DashboardPage() {
           }
         }
 
-        const activeUserId = savedUser?.id || 'usr-101';
-        
-        // 1. Isolasi Transaksi per User
-        const savedTxsStr = localStorage.getItem(`tatadana_transactions_${activeUserId}`);
-        if (savedTxsStr) {
-          const parsedTxs = JSON.parse(savedTxsStr);
-          if (Array.isArray(parsedTxs)) {
-            setTransactions(parsedTxs);
-          }
-        } else {
-          // User baru: transaksi bermula dari KOSONG (0)
-          setTransactions([]);
+        const isSuper = savedUser?.role === 'superadmin' || savedUser?.email?.toLowerCase() === 'lramdanie02@gmail.com';
+        const userEmail = savedUser?.email ? String(savedUser.email).toLowerCase().trim() : '';
+        const emailKey = userEmail ? `email_${userEmail}` : null;
+        const activeUserId = savedUser?.id || (isSuper ? 'usr-superadmin-01' : 'usr-101');
+
+        // 1. Wallets Loading: Search all potential storage keys & API fallback
+        let loadedWallets: Wallet[] | null = null;
+        const walletKeysToCheck = [
+          emailKey ? `tatadana_wallets_${emailKey}` : null,
+          `tatadana_wallets_${activeUserId}`,
+          isSuper ? 'tatadana_wallets_usr-superadmin-01' : null,
+          isSuper ? 'tatadana_wallets_usr-101' : null,
+          'tatadana_wallets_usr-101',
+        ].filter(Boolean) as string[];
+
+        for (const k of walletKeysToCheck) {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                const hasCustomBalance = parsed.some(
+                  (w: any) =>
+                    (w.balance && Number(w.balance) !== 0) ||
+                    (w.initial_balance && Number(w.initial_balance) !== 0)
+                );
+                if (hasCustomBalance) {
+                  loadedWallets = parsed;
+                  break;
+                }
+                if (!loadedWallets) {
+                  loadedWallets = parsed;
+                }
+              }
+            }
+          } catch {}
         }
 
-        // 2. Isolasi Dompet (Wallets) per User
-        const savedWalletsStr = localStorage.getItem(`tatadana_wallets_${activeUserId}`);
-        if (savedWalletsStr) {
-          const parsedWallets = JSON.parse(savedWalletsStr);
-          if (Array.isArray(parsedWallets) && parsedWallets.length > 0) {
-            setWallets(parsedWallets);
+        // Parallel server-side fetch from /api/wallets
+        try {
+          fetch(`/api/wallets?userId=${encodeURIComponent(activeUserId)}&email=${encodeURIComponent(userEmail)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.ok && Array.isArray(d.wallets) && d.wallets.length > 0) {
+                const apiHasBalance = d.wallets.some(
+                  (w: any) =>
+                    (w.balance && Number(w.balance) !== 0) ||
+                    (w.initial_balance && Number(w.initial_balance) !== 0)
+                );
+                setWallets((current) => {
+                  const currentHasBalance = current.some(
+                    (w) =>
+                      (w.balance && Number(w.balance) !== 0) ||
+                      (w.initial_balance && Number(w.initial_balance) !== 0)
+                  );
+                  if (!currentHasBalance && apiHasBalance) {
+                    return d.wallets;
+                  }
+                  return current;
+                });
+              }
+            })
+            .catch(() => {});
+        } catch {}
+
+        if (loadedWallets && loadedWallets.length > 0) {
+          setWallets(loadedWallets);
+          if (emailKey) localStorage.setItem(`tatadana_wallets_${emailKey}`, JSON.stringify(loadedWallets));
+          localStorage.setItem(`tatadana_wallets_${activeUserId}`, JSON.stringify(loadedWallets));
+          if (isSuper) {
+            localStorage.setItem('tatadana_wallets_usr-superadmin-01', JSON.stringify(loadedWallets));
+            localStorage.setItem('tatadana_wallets_usr-101', JSON.stringify(loadedWallets));
           }
         } else {
           // User baru: dompet default bersih dengan saldo Rp 0
@@ -314,17 +368,70 @@ export default function DashboardPage() {
             },
           ];
           setWallets(defaultUserWallets);
+          if (emailKey) localStorage.setItem(`tatadana_wallets_${emailKey}`, JSON.stringify(defaultUserWallets));
           localStorage.setItem(`tatadana_wallets_${activeUserId}`, JSON.stringify(defaultUserWallets));
         }
 
-        // 3. Isolasi Target Budget per User
-        const savedBudgetsStr = localStorage.getItem(`tatadana_budgets_${activeUserId}`);
-        if (savedBudgetsStr) {
-          const parsedBudgets = JSON.parse(savedBudgetsStr);
-          if (Array.isArray(parsedBudgets)) {
-            setBudgets(parsedBudgets);
+        // 2. Transactions Loading: Search all potential storage keys & merge
+        const txMap = new Map<string, Transaction>();
+        const txKeysToCheck = [
+          emailKey ? `tatadana_transactions_${emailKey}` : null,
+          `tatadana_transactions_${activeUserId}`,
+          isSuper ? 'tatadana_transactions_usr-superadmin-01' : null,
+          isSuper ? 'tatadana_transactions_usr-101' : null,
+          'tatadana_transactions_usr-101',
+        ].filter(Boolean) as string[];
+
+        for (const k of txKeysToCheck) {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                parsed.forEach((t: Transaction) => {
+                  if (t && t.id) txMap.set(t.id, t);
+                });
+              }
+            }
+          } catch {}
+        }
+
+        const mergedTxs = Array.from(txMap.values()).sort(
+          (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        );
+        if (mergedTxs.length > 0) {
+          setTransactions(mergedTxs);
+          if (emailKey) localStorage.setItem(`tatadana_transactions_${emailKey}`, JSON.stringify(mergedTxs));
+          localStorage.setItem(`tatadana_transactions_${activeUserId}`, JSON.stringify(mergedTxs));
+          if (isSuper) {
+            localStorage.setItem('tatadana_transactions_usr-superadmin-01', JSON.stringify(mergedTxs));
+            localStorage.setItem('tatadana_transactions_usr-101', JSON.stringify(mergedTxs));
           }
         }
+
+        // 3. Budgets Loading
+        const budgetKeysToCheck = [
+          emailKey ? `tatadana_budgets_${emailKey}` : null,
+          `tatadana_budgets_${activeUserId}`,
+          isSuper ? 'tatadana_budgets_usr-superadmin-01' : null,
+          isSuper ? 'tatadana_budgets_usr-101' : null,
+        ].filter(Boolean) as string[];
+
+        for (const k of budgetKeysToCheck) {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setBudgets(parsed);
+                break;
+              }
+            }
+          } catch {}
+        }
+
+        // Mark initial load as completely finished so subsequent state changes can be safely autosaved
+        isInitialLoadedRef.current = true;
       } catch (err) {
         console.warn('Error reading saved user:', err);
       }
@@ -513,25 +620,53 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(initialProfile);
   const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
 
-  // Sync Wallets to User-isolated Storage on every change
+  // Sync Wallets to User-isolated Storage on every change (ONLY after initial load finishes)
   React.useEffect(() => {
+    if (!isInitialLoadedRef.current) return;
     if (typeof window !== 'undefined' && profile?.id && wallets.length > 0) {
+      const userEmail = (profile as any)?.email ? String((profile as any).email).toLowerCase().trim() : '';
+      const emailKey = userEmail ? `email_${userEmail}` : null;
       try {
+        if (emailKey) localStorage.setItem(`tatadana_wallets_${emailKey}`, JSON.stringify(wallets));
         localStorage.setItem(`tatadana_wallets_${profile.id}`, JSON.stringify(wallets));
+        if (userEmail === 'lramdanie02@gmail.com' || profile.id === 'usr-superadmin-01' || profile.id === 'usr-101') {
+          localStorage.setItem('tatadana_wallets_usr-101', JSON.stringify(wallets));
+          localStorage.setItem('tatadana_wallets_usr-superadmin-01', JSON.stringify(wallets));
+        }
       } catch {}
+
+      // Background persist to server API
+      fetch('/api/wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          email: userEmail,
+          wallets,
+        }),
+      }).catch(() => {});
     }
-  }, [wallets, profile?.id]);
+  }, [wallets, profile?.id, (profile as any)?.email]);
+
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
 
-  // Sync Budgets to User-isolated Storage on every change
+  // Sync Budgets to User-isolated Storage on every change (ONLY after initial load finishes)
   React.useEffect(() => {
+    if (!isInitialLoadedRef.current) return;
     if (typeof window !== 'undefined' && profile?.id && budgets.length > 0) {
+      const userEmail = (profile as any)?.email ? String((profile as any).email).toLowerCase().trim() : '';
+      const emailKey = userEmail ? `email_${userEmail}` : null;
       try {
+        if (emailKey) localStorage.setItem(`tatadana_budgets_${emailKey}`, JSON.stringify(budgets));
         localStorage.setItem(`tatadana_budgets_${profile.id}`, JSON.stringify(budgets));
+        if (userEmail === 'lramdanie02@gmail.com') {
+          localStorage.setItem('tatadana_budgets_usr-101', JSON.stringify(budgets));
+          localStorage.setItem('tatadana_budgets_usr-superadmin-01', JSON.stringify(budgets));
+        }
       } catch {}
     }
-  }, [budgets, profile?.id]);
+  }, [budgets, profile?.id, (profile as any)?.email]);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
 
   // New Transaction Modal State
@@ -725,8 +860,9 @@ export default function DashboardPage() {
     const filtered = transactions.filter((t) => {
       // Isolasi data ketat: hanya transaksi milik user yang aktif saat ini
       if (t.user_id === activeUserId) return true;
+      if (userEmail && (t as any).user_email === userEmail) return true;
       if (tgUserId && (t.user_id === tgUserId || String(t.user_id) === tgUserId)) return true;
-      if (isSuper && t.user_id === 'usr-101') return true;
+      if (isSuper && (t.user_id === 'usr-101' || t.user_id === 'usr-superadmin-01')) return true;
       return false;
     });
     return [...filtered].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
@@ -1129,18 +1265,43 @@ export default function DashboardPage() {
     // Set initial_balance so that displayed balance = newBal
     const targetInitial = newBal - netTransactions;
 
-    setWallets((prev) =>
-      prev.map((w) => {
-        if (w.id === editingWallet.id) {
-          return {
-            ...w,
-            initial_balance: targetInitial,
-            balance: newBal,
-          };
+    const updatedWallets = wallets.map((w) => {
+      if (w.id === editingWallet.id) {
+        return {
+          ...w,
+          initial_balance: targetInitial,
+          balance: newBal,
+        };
+      }
+      return w;
+    });
+
+    setWallets(updatedWallets);
+
+    // Save immediately to all user storage keys
+    if (typeof window !== 'undefined') {
+      try {
+        const userEmail = (profile as any)?.email ? String((profile as any).email).toLowerCase().trim() : '';
+        const emailKey = userEmail ? `email_${userEmail}` : null;
+        if (emailKey) localStorage.setItem(`tatadana_wallets_${emailKey}`, JSON.stringify(updatedWallets));
+        if (profile?.id) localStorage.setItem(`tatadana_wallets_${profile.id}`, JSON.stringify(updatedWallets));
+        if (userEmail === 'lramdanie02@gmail.com' || profile?.id === 'usr-superadmin-01' || profile?.id === 'usr-101') {
+          localStorage.setItem('tatadana_wallets_usr-101', JSON.stringify(updatedWallets));
+          localStorage.setItem('tatadana_wallets_usr-superadmin-01', JSON.stringify(updatedWallets));
         }
-        return w;
-      })
-    );
+      } catch {}
+    }
+
+    // Persist immediately to server API
+    fetch('/api/wallets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: profile?.id,
+        email: (profile as any)?.email,
+        wallets: updatedWallets,
+      }),
+    }).catch(() => {});
 
     setShowEditBalanceModal(false);
     setEditingWallet(null);
@@ -1277,8 +1438,15 @@ export default function DashboardPage() {
       const updated = [newTx, ...prev.filter((t) => t.id !== newTx.id)];
       if (typeof window !== 'undefined') {
         try {
+          const userEmail = (profile as any)?.email ? String((profile as any).email).toLowerCase().trim() : '';
+          const emailKey = userEmail ? `email_${userEmail}` : null;
           const activeId = profile?.id || 'usr-101';
+          if (emailKey) localStorage.setItem(`tatadana_transactions_${emailKey}`, JSON.stringify(updated));
           localStorage.setItem(`tatadana_transactions_${activeId}`, JSON.stringify(updated));
+          if (userEmail === 'lramdanie02@gmail.com' || activeId === 'usr-superadmin-01' || activeId === 'usr-101') {
+            localStorage.setItem('tatadana_transactions_usr-101', JSON.stringify(updated));
+            localStorage.setItem('tatadana_transactions_usr-superadmin-01', JSON.stringify(updated));
+          }
         } catch {}
       }
       return updated;
@@ -1902,8 +2070,15 @@ ${itemListText}
         );
         if (typeof window !== 'undefined') {
           try {
+            const userEmail = (profile as any)?.email ? String((profile as any).email).toLowerCase().trim() : '';
+            const emailKey = userEmail ? `email_${userEmail}` : null;
             const activeId = profile?.id || 'usr-101';
+            if (emailKey) localStorage.setItem(`tatadana_transactions_${emailKey}`, JSON.stringify(updated));
             localStorage.setItem(`tatadana_transactions_${activeId}`, JSON.stringify(updated));
+            if (userEmail === 'lramdanie02@gmail.com' || activeId === 'usr-superadmin-01' || activeId === 'usr-101') {
+              localStorage.setItem('tatadana_transactions_usr-101', JSON.stringify(updated));
+              localStorage.setItem('tatadana_transactions_usr-superadmin-01', JSON.stringify(updated));
+            }
           } catch {}
         }
         return updated;
